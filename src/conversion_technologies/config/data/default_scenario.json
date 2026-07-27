@@ -1,0 +1,6 @@
+{
+  "_comment": "Default export scenario. An empty technology_ids list means 'export every registered technology'. Copy this file and adjust to scope a project-specific export run.",
+  "technology_ids": [],
+  "schema": "modern",
+  "output_dir": "outputs"
+}

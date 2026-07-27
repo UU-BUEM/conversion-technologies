@@ -1,0 +1,18 @@
+{
+  "_comment": "Indicative default capacity (kW), investment cost (currency/kW), lifetime (years) and efficiency per boiler technology and deployment scale. Order-of-magnitude literature values (NL residential/utility context) meant as a starting point -- override per project via a custom config file.",
+  "electric_boiler": {
+    "household": { "flow_cap_max": 12, "cost_flow_cap": 150, "lifetime": 20, "efficiency": 0.99 },
+    "building": { "flow_cap_max": 60, "cost_flow_cap": 120, "lifetime": 20, "efficiency": 0.99 },
+    "community": { "flow_cap_max": 500, "cost_flow_cap": 100, "lifetime": 20, "efficiency": 0.99 }
+  },
+  "gas_boiler": {
+    "household": { "flow_cap_max": 24, "cost_flow_cap": 100, "lifetime": 18, "efficiency": 0.90, "part_load_factor": 0.6 },
+    "building": { "flow_cap_max": 120, "cost_flow_cap": 80, "lifetime": 18, "efficiency": 0.92, "part_load_factor": 0.7 },
+    "community": { "flow_cap_max": 1000, "cost_flow_cap": 70, "lifetime": 20, "efficiency": 0.94, "part_load_factor": 0.75 }
+  },
+  "biomass_boiler": {
+    "household": { "flow_cap_max": 15, "cost_flow_cap": 400, "lifetime": 20, "efficiency": 0.85 },
+    "building": { "flow_cap_max": 100, "cost_flow_cap": 350, "lifetime": 20, "efficiency": 0.87 },
+    "community": { "flow_cap_max": 2000, "cost_flow_cap": 300, "lifetime": 22, "efficiency": 0.88 }
+  }
+}

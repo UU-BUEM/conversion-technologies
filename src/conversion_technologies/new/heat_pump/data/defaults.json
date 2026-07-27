@@ -1,0 +1,17 @@
+{
+  "_comment": "Default capacity (kW), investment cost (currency/kW), lifetime (years) and Carnot quality (2nd-law) efficiency per heat pump technology and deployment scale, plus the design source/sink temperatures (deg C) used to compute nominal COP via new.heat_pump.generic.cop_calculation.carnot_cop. Ground/geothermal sources run at a milder, more stable design temperature than outdoor air.",
+  "electric_heat_pump": {
+    "design_source_temp_c": 2.0,
+    "design_sink_temp_c": 45.0,
+    "household": { "flow_cap_max": 10, "cost_flow_cap": 900, "lifetime": 18, "carnot_efficiency": 0.45 },
+    "building": { "flow_cap_max": 80, "cost_flow_cap": 750, "lifetime": 18, "carnot_efficiency": 0.45 },
+    "community": { "flow_cap_max": 1500, "cost_flow_cap": 600, "lifetime": 20, "carnot_efficiency": 0.48 }
+  },
+  "geothermal_heat_pump": {
+    "design_source_temp_c": 10.0,
+    "design_sink_temp_c": 45.0,
+    "household": { "flow_cap_max": 10, "cost_flow_cap": 1800, "lifetime": 25, "carnot_efficiency": 0.50 },
+    "building": { "flow_cap_max": 100, "cost_flow_cap": 1500, "lifetime": 25, "carnot_efficiency": 0.50 },
+    "community": { "flow_cap_max": 2000, "cost_flow_cap": 1200, "lifetime": 30, "carnot_efficiency": 0.52 }
+  }
+}

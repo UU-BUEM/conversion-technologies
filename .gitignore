@@ -30,10 +30,11 @@ htmlcov/
 *.whl
 *.tar.gz
 
-# Virtual environments
+# Virtual environments (repo-root only -- NOT infrastructure/env/, which holds
+# the tracked conda_env.yml spec, and NOT any nested */data/ package-data dir)
 .venv/
-venv/
-env/
+/venv/
+/env/
 
 # IDE / editor
 .vscode/*
@@ -47,9 +48,10 @@ Thumbs.db
 # Environment secrets
 .env
 
-# Run outputs / local data (never committed)
+# Run outputs / local data (never committed) -- repo-root only; does NOT match
+# the tracked src/conversion_technologies/**/data/ package-data directories
 outputs/
-data/
+/data/
 *.log
 
 # Local git/push helper scripts (per-developer, not canonical)
