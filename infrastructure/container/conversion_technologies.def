@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: continuumio/miniconda3:24.1.2-0
+
+%files
+    infrastructure/env/conversion_env.yml /opt/conversion_env.yml
+    src/ /app/src/
+
+%environment
+    export PATH=/opt/conda/envs/conversion_env/bin:$PATH
+    export CONDA_DEFAULT_ENV=conversion_env
+    export PYTHONPATH=/app/src
+
+%post
+    /opt/conda/bin/conda update -n base -c defaults conda -y --quiet
+    /opt/conda/bin/conda env create -f /opt/conversion_env.yml
+    /opt/conda/bin/conda clean -afy
+    rm /opt/conversion_env.yml
+
+%runscript
+    exec python -m conversion_technologies "$@"
+
+%test
+    /opt/conda/envs/conversion_env/bin/python -c "import numpy, ruamel.yaml; print('OK')"

@@ -1,0 +1,38 @@
+{% set version = environ.get("GIT_DESCRIBE_TAG", "0.1.0").lstrip("v") %}
+
+package:
+  name: conversion-technologies
+  version: {{ version }}
+
+source:
+  path: .
+
+build:
+  number: 0
+  script: python -m pip install . --no-deps -vv
+
+requirements:
+  host:
+    - python 3.12.*
+    - pip
+    - setuptools >=68
+    - setuptools-scm >=8
+  run:
+    - python 3.12.*
+    - numpy >=1.26,<3
+    - ruamel.yaml >=0.18,<1
+
+test:
+  imports:
+    - conversion_technologies
+  commands:
+    - python -m conversion_technologies info
+
+about:
+  summary: Calliope-compatible technology YAML configs for heat-producing conversion technologies (heat pumps, boilers, CHP).
+  home: https://github.com/UU-BUEM/conversion-technologies
+  license: MIT
+
+extra:
+  recipe-maintainers:
+    - somaduttasahoo

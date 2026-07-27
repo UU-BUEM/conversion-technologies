@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# setuptools-scm generated version file
+src/conversion_technologies/_version.py
+
+# Conda build artifacts
+.conda-bld/
+conda-bld/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.pytype/
+
+# Coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Packaging
+*.whl
+*.tar.gz
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / editor
+.vscode/*
+!.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment secrets
+.env
+
+# Run outputs / local data (never committed)
+outputs/
+data/
+*.log
+
+# Local git/push helper scripts (per-developer, not canonical)
+push.sh
+push.ps1
+.commit-message.md
+
+# Ad hoc local notes
+conversion_technologies_improvement*.txt

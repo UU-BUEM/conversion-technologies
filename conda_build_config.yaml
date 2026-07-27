@@ -1,0 +1,8 @@
+python:
+  - 3.12
+numpy:
+  - 1.26
+channel_sources:
+  - conda-forge,defaults
+channel_targets:
+  - conda-forge main

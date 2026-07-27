@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=68", "wheel", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "conversion-technologies"
+dynamic = ["version"]
+description = "Calliope-compatible technology definitions for heat-producing energy conversion options (heat pumps, boilers, combined heat and power) from household to community scale."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Somadutta Sahoo", email = "s.sahoo@uu.nl" }]
+keywords = [
+    "calliope",
+    "energy-system-modeling",
+    "heat-pump",
+    "boiler",
+    "combined-heat-and-power",
+    "building-energy",
+    "UU-BUEM",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.26,<3",
+    "ruamel.yaml>=0.18,<1",
+]
+
+[project.optional-dependencies]
+dev = ["mypy", "pytest", "pytest-cov", "ruff"]
+
+[project.scripts]
+conversion-technologies = "conversion_technologies.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/UU-BUEM/conversion-technologies"
+Repository = "https://github.com/UU-BUEM/conversion-technologies"
+"Bug Tracker" = "https://github.com/UU-BUEM/conversion-technologies/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"conversion_technologies.new.boiler" = ["data/*.json"]
+"conversion_technologies.new.heat_pump" = ["data/*.json"]
+"conversion_technologies.new.combined_heat_and_power" = ["data/*.json"]
+"conversion_technologies.config" = ["data/*.json"]
+
+[tool.setuptools_scm]
+fallback_version = "0.1.0"
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
+version_file = "src/conversion_technologies/_version.py"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src"]
+# existing/ (fireplace.py) is a pre-existing, out-of-scope module left untouched
+# per .claude/resolved.md ("existing-vs-new") -- not linted/formatted by this project.
+extend-exclude = ["src/conversion_technologies/existing"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["conversion_technologies"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+packages = ["conversion_technologies"]
+exclude = ["^src/conversion_technologies/existing/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          environment-file: infrastructure/env/conversion_env.yml
+          python-version: "3.12"
+          activate-environment: conversion_env
+
+      - name: Install package
+        shell: bash -l {0}
+        run: pip install -e . --no-deps
+
+      - name: Lint
+        shell: bash -l {0}
+        run: python -m ruff check src/ tests/
+
+      - name: Type check
+        shell: bash -l {0}
+        run: python -m mypy src
+
+      - name: Test
+        shell: bash -l {0}
+        run: python -m pytest -q --cov=conversion_technologies --cov-report=xml
+
+      - name: CLI smoke test
+        shell: bash -l {0}
+        run: python -m conversion_technologies info
+
+      - uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage.xml

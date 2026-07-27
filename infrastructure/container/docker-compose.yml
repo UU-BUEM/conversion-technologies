@@ -1,0 +1,13 @@
+services:
+  conversion-technologies:
+    build:
+      context: ../..
+      dockerfile: infrastructure/container/Dockerfile
+    image: conversion-technologies:latest
+    volumes:
+      - ../../src:/app/src:ro
+      - ${CONVERSION_TECH_OUTPUT_DIR:-../../outputs}:/app/outputs
+    environment:
+      PYTHONPATH: /app/src
+      CONVERSION_TECH_OUTPUT_DIR: /app/outputs
+    command: ["python", "-m", "conversion_technologies", "export-all", "-o", "/app/outputs"]
