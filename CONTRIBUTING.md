@@ -54,3 +54,17 @@ water-source variant`.
 - Add/update tests for any behavior change.
 - Update `CHANGELOG.md` under `[Unreleased]`.
 - CI (lint, type check, tests, CLI smoke test) must be green.
+
+## Releasing
+
+Versioning is entirely tag-driven (`setuptools_scm`) -- there is nothing to
+bump in `pyproject.toml`. To cut a release:
+
+1. Move the `[Unreleased]` entries in `CHANGELOG.md` under a new
+   `## [X.Y.Z] - YYYY-MM-DD` heading (leave `[Unreleased]` empty above it).
+2. Commit that, then tag: `git tag -a vX.Y.Z -m "vX.Y.Z: <one-line summary>"`.
+3. `git push origin main --follow-tags` -- the tag push triggers
+   `.github/workflows/release.yml`, which builds the sdist/wheel and
+   publishes a GitHub Release with them attached.
+4. Confirm both the `CI` and `Release` workflow runs are green:
+   `gh run list --repo UU-BUEM/conversion-technologies --limit 2`.
