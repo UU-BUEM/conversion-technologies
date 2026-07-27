@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `.gitignore`'s unanchored `env/` and `data/` patterns matched at any
+  depth, silently excluding `infrastructure/env/conversion_env.yml` (broke
+  CI) and every `new/*/data/defaults.json` plus
+  `config/data/default_scenario.json` (broke the package itself -- these
+  are read via `importlib.resources` at import time). Anchored both to the
+  repo root.
+
 ### Changed
 
 - Heat pump `carnot_cop` now accepts a scalar or an array of source

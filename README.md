@@ -1,5 +1,7 @@
 # conversion-technologies
 
+[![CI](https://github.com/UU-BUEM/conversion-technologies/actions/workflows/ci.yml/badge.svg)](https://github.com/UU-BUEM/conversion-technologies/actions/workflows/ci.yml)
+
 Calliope-compatible technology YAML configs for heat-producing energy
 conversion technologies — heat pumps, boilers, and combined heat and power
 (CHP) — from a single household up to a community scale.

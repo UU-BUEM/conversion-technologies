@@ -24,3 +24,11 @@
 - [dependencies] BY-DESIGN: `ruamel.yaml` was added (not in `weather`/`occupancy`)
   because comment-preserving, readable YAML output is this package's actual
   deliverable. No pydantic — dataclasses match sibling convention.
+- [repo] Pushed to `github.com/UU-BUEM/conversion-technologies` (public,
+  `main` branch). The first CI run failed in 8s because `.gitignore`'s
+  unanchored `env/`/`data/` patterns had silently excluded
+  `infrastructure/env/conversion_env.yml` and every `data/defaults.json` --
+  fixed and re-pushed (see CHANGELOG "Fixed"); check `gh run list --repo
+  UU-BUEM/conversion-technologies` if a future push mysteriously fails fast
+  again, since an unanchored gitignore pattern is an easy repeat mistake
+  when adding a new nested `data/` or `env/` directory.
