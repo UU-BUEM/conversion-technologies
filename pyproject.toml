@@ -46,9 +46,7 @@ Repository = "https://github.com/UU-BUEM/conversion-technologies"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"conversion_technologies.new.boiler" = ["data/*.json"]
-"conversion_technologies.new.heat_pump" = ["data/*.json"]
-"conversion_technologies.new.combined_heat_and_power" = ["data/*.json"]
+"conversion_technologies.new" = ["technologies.csv", "costs.csv"]
 "conversion_technologies.config" = ["data/*.json"]
 
 [tool.setuptools_scm]

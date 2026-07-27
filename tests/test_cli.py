@@ -28,6 +28,49 @@ def test_list_command_filters_by_category_alias(capsys) -> None:
     assert "boiler_electric_household" not in out
 
 
+def test_list_command_filters_by_type_within_a_category(capsys) -> None:
+    exit_code = main(["list", "--category", "hp", "--variant", "electric"])
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    assert "heat_pump_electric_household" in out
+    assert "heat_pump_electric_building" in out
+    assert "heat_pump_electric_community" in out
+    assert "heat_pump_geothermal" not in out
+
+
+def test_list_command_type_filter_is_case_insensitive(capsys) -> None:
+    exit_code = main(["list", "--category", "hp", "--variant", "ELECTRIC"])
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    assert "heat_pump_electric_household" in out
+
+
+def test_list_command_filters_by_scale(capsys) -> None:
+    exit_code = main(["list", "--scale", "household"])
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    assert "heat_pump_electric_household" in out
+    assert "heat_pump_electric_building" not in out
+
+
+def test_list_command_type_and_scale_combine_to_one_technology(capsys) -> None:
+    exit_code = main(
+        ["list", "--category", "hp", "--variant", "electric", "--scale", "household"]
+    )
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    lines = [line for line in out.splitlines() if line.strip()]
+    assert len(lines) == 1
+    assert "heat_pump_electric_household" in lines[0]
+
+
+def test_list_command_no_match_reports_available_types(capsys) -> None:
+    exit_code = main(["list", "--category", "boiler", "--variant", "geothermal"])
+    out = capsys.readouterr().out
+    assert exit_code == 1
+    assert "electric" in out and "gas" in out and "biomass" in out
+
+
 def test_export_command_writes_a_file(tmp_path: Path) -> None:
     output = tmp_path / "hp.yaml"
     exit_code = main(["export", "heat_pump_electric_household", "-o", str(output)])
@@ -73,6 +116,52 @@ def test_export_all_category_to_directory_only_writes_that_category(
     }
 
 
+def test_export_all_category_and_type_isolate_one_variant_all_scales(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "heat_pump_electric.yaml"
+    exit_code = main(
+        [
+            "export-all",
+            "--category",
+            "hp",
+            "--variant",
+            "electric",
+            "-o",
+            str(output),
+        ]
+    )
+    assert exit_code == 0
+    text = output.read_text(encoding="utf-8")
+    assert "heat_pump_electric_household" in text
+    assert "heat_pump_electric_building" in text
+    assert "heat_pump_electric_community" in text
+    assert "heat_pump_geothermal" not in text
+
+
+def test_export_all_category_type_and_scale_isolate_exactly_one_technology(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "one.yaml"
+    exit_code = main(
+        [
+            "export-all",
+            "--category",
+            "hp",
+            "--variant",
+            "electric",
+            "--scale",
+            "household",
+            "-o",
+            str(output),
+        ]
+    )
+    assert exit_code == 0
+    text = output.read_text(encoding="utf-8")
+    assert "heat_pump_electric_household" in text
+    assert "heat_pump_electric_building" not in text
+
+
 def test_export_all_config_file_selects_exact_technology_ids(tmp_path: Path) -> None:
     config_path = tmp_path / "scenario.json"
     config_path.write_text(
@@ -82,7 +171,7 @@ def test_export_all_config_file_selects_exact_technology_ids(tmp_path: Path) -> 
                     "heat_pump_electric_household",
                     "boiler_gas_household",
                 ],
-                "schema": "legacy_v051",
+                "schema": "modern",
             }
         ),
         encoding="utf-8",
@@ -97,4 +186,4 @@ def test_export_all_config_file_selects_exact_technology_ids(tmp_path: Path) -> 
     body = (output_dir / "heat_pump_electric_household.yaml").read_text(
         encoding="utf-8"
     )
-    assert "conversion_plus" in body  # legacy_v051 schema, per the config file
+    assert "base_tech: conversion" in body  # modern schema, per the config file

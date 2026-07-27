@@ -1,0 +1,22 @@
+category,variant,scale,name,color,carrier_in,carrier_in_2,flow_cap_min,flow_cap_max,lifetime,efficiency,part_load_factor,design_source_temp_c,design_sink_temp_c,alpha,beta,flow_ramping
+boiler,electric,household,Electric resistance boiler,#F2C14E,electricity,,,12,20,0.99,,,,,,
+boiler,electric,building,Electric resistance boiler,#F2C14E,electricity,,,60,20,0.99,,,,,,
+boiler,electric,community,Electric resistance boiler,#F2C14E,electricity,,,500,20,0.99,,,,,,
+boiler,gas,household,Condensing natural gas boiler,#8D8D8D,natural_gas,,,24,18,0.90,0.6,,,,,
+boiler,gas,building,Condensing natural gas boiler,#8D8D8D,natural_gas,,,120,18,0.92,0.7,,,,,
+boiler,gas,community,Condensing natural gas boiler,#8D8D8D,natural_gas,,,1000,20,0.94,0.75,,,,,
+boiler,biomass,household,Biomass (wood pellet) boiler,#7A5230,biomass,,,15,20,0.85,,,,,,
+boiler,biomass,building,Biomass (wood pellet) boiler,#7A5230,biomass,,,100,20,0.87,,,,,,
+boiler,biomass,community,Biomass (wood pellet) boiler,#7A5230,biomass,,,2000,22,0.88,,,,,,
+heat_pump,electric,household,Air-source electric heat pump,#4C9F70,electricity,ambient_heat,,10,18,0.45,,2.0,45.0,,,
+heat_pump,electric,building,Air-source electric heat pump,#4C9F70,electricity,ambient_heat,,80,18,0.45,,2.0,45.0,,,
+heat_pump,electric,community,Air-source electric heat pump,#4C9F70,electricity,ambient_heat,,1500,20,0.48,,2.0,45.0,,,
+heat_pump,geothermal,household,Ground-source (geothermal) heat pump,#2E6E8E,electricity,ground_heat,,10,25,0.50,,10.0,45.0,,,
+heat_pump,geothermal,building,Ground-source (geothermal) heat pump,#2E6E8E,electricity,ground_heat,,100,25,0.50,,10.0,45.0,,,
+heat_pump,geothermal,community,Ground-source (geothermal) heat pump,#2E6E8E,electricity,ground_heat,,2000,30,0.52,,10.0,45.0,,,
+combined_heat_and_power,gas,household,Natural gas combined heat and power,#C1502E,natural_gas,,,5,15,,,,,0.3375,0.5625,1.0
+combined_heat_and_power,gas,building,Natural gas combined heat and power,#C1502E,natural_gas,,,100,18,,,,,0.3467,0.5333,1.0
+combined_heat_and_power,gas,community,Natural gas combined heat and power,#C1502E,natural_gas,,,2000,20,,,,,0.3729,0.4971,1.0
+combined_heat_and_power,biomass,household,Biomass combined heat and power,#5B7A3A,biomass,,,5,15,,,,,0.2074,0.5926,0.3
+combined_heat_and_power,biomass,building,Biomass combined heat and power,#5B7A3A,biomass,,,80,18,,,,,0.2286,0.5714,0.3
+combined_heat_and_power,biomass,community,Biomass combined heat and power,#5B7A3A,biomass,,,1500,20,,,,,0.2545,0.5655,0.3

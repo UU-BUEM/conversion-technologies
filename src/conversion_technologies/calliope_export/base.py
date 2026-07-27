@@ -1,6 +1,6 @@
 """Shape every Calliope schema exporter must satisfy.
 
-Exporters are plain modules (``legacy_v051``, ``modern``), not classes; this
+Exporters are plain modules (currently just ``modern``), not classes; this
 Protocol exists purely to document and type-check that shape.
 """
 

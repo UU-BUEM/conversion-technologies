@@ -34,6 +34,9 @@ _CATEGORY_ALIASES = {
     "combined_heat_and_power": "combined_heat_and_power",
 }
 
+# TechnologySpec.scale is always one of these three, for every category.
+_SCALE_CHOICES = ("household", "building", "community")
+
 
 def _cmd_info(_args: argparse.Namespace) -> int:
     print(f"conversion_technologies {__version__}")
@@ -42,17 +45,54 @@ def _cmd_info(_args: argparse.Namespace) -> int:
     return 0
 
 
-def _filter_by_category(
-    techs: list[tuple[str, TechnologySpec]], category: str | None
+def _filter_technologies(
+    techs: list[tuple[str, TechnologySpec]],
+    category: str | None,
+    variant: str | None,
+    scale: str | None,
 ) -> list[tuple[str, TechnologySpec]]:
-    if category is None:
-        return techs
-    canonical = _CATEGORY_ALIASES[category]
-    return [(tid, t) for tid, t in techs if t.category == canonical]
+    """Narrow ``techs`` by category (aliased), variant ("electric"/"gas"/...) and scale.
+
+    All three filters are optional and combine with AND -- e.g. category="hp"
+    + variant="electric" matches every scale of the air-source electric heat
+    pump; add scale="household" to get exactly one technology.
+    """
+    if category is not None:
+        canonical_category = _CATEGORY_ALIASES[category]
+        techs = [(tid, t) for tid, t in techs if t.category == canonical_category]
+    if variant is not None:
+        techs = [(tid, t) for tid, t in techs if t.variant == variant.lower()]
+    if scale is not None:
+        techs = [(tid, t) for tid, t in techs if t.scale == scale]
+    return techs
+
+
+def _no_match_message(
+    all_techs: list[tuple[str, TechnologySpec]],
+    category: str | None,
+    variant: str | None,
+) -> str:
+    """A helpful "no matches" message listing the variants that *do* exist."""
+    if category is not None:
+        canonical_category = _CATEGORY_ALIASES[category]
+        available = sorted(
+            {t.variant for _, t in all_techs if t.category == canonical_category}
+        )
+        return (
+            f"No technologies matched. Available --variant values for "
+            f"category '{category}': {available}"
+        )
+    if variant is not None:
+        return f"No technologies matched --variant '{variant}' in any category."
+    return "No technologies matched the given filters."
 
 
 def _cmd_list(args: argparse.Namespace) -> int:
-    techs = _filter_by_category(sorted(all_technologies().items()), args.category)
+    all_techs = sorted(all_technologies().items())
+    techs = _filter_technologies(all_techs, args.category, args.variant, args.scale)
+    if not techs:
+        print(_no_match_message(all_techs, args.category, args.variant))
+        return 1
     for tech_id, tech in techs:
         print(
             f"{tech_id:32s} {tech.category:24s} "
@@ -90,15 +130,15 @@ def _cmd_export_all(args: argparse.Namespace) -> int:
     output = output or SETTINGS.output_dir
     exporter = EXPORTERS[schema]
 
-    techs = sorted(all_technologies().items())
+    all_techs = sorted(all_technologies().items())
     if technology_ids:
         wanted = set(technology_ids)
-        techs = [(tid, t) for tid, t in techs if tid in wanted]
+        techs = [(tid, t) for tid, t in all_techs if tid in wanted]
     else:
-        techs = _filter_by_category(techs, args.category)
+        techs = _filter_technologies(all_techs, args.category, args.variant, args.scale)
 
     if not techs:
-        print("No technologies matched the given filters.")
+        print(_no_match_message(all_techs, args.category, args.variant))
         return 1
 
     output_path = Path(output)
@@ -113,6 +153,32 @@ def _cmd_export_all(args: argparse.Namespace) -> int:
         path = write_technology_yaml(tid, body, output_path / f"{tid}.yaml")
         print(f"Wrote {path}")
     return 0
+
+
+def _add_filter_arguments(subparser: argparse.ArgumentParser) -> None:
+    """Shared --category/--variant/--scale filters for ``list`` and ``export-all``."""
+    subparser.add_argument(
+        "--category",
+        choices=sorted(_CATEGORY_ALIASES),
+        default=None,
+        help="Filter by category (aliases: hp, boiler, chp).",
+    )
+    subparser.add_argument(
+        "--variant",
+        default=None,
+        help=(
+            "Filter by variant within a category, e.g. 'electric', "
+            "'geothermal', 'gas', 'biomass' (case-insensitive). "
+            "Combine with --category to disambiguate, e.g. "
+            "--category hp --variant electric."
+        ),
+    )
+    subparser.add_argument(
+        "--scale",
+        choices=_SCALE_CHOICES,
+        default=None,
+        help="Filter by deployment scale.",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -134,12 +200,7 @@ def build_parser() -> argparse.ArgumentParser:
     info_parser.set_defaults(func=_cmd_info)
 
     list_parser = subparsers.add_parser("list", help="List registered technologies.")
-    list_parser.add_argument(
-        "--category",
-        choices=sorted(_CATEGORY_ALIASES),
-        default=None,
-        help="Filter by category (aliases: hp, boiler, chp).",
-    )
+    _add_filter_arguments(list_parser)
     list_parser.set_defaults(func=_cmd_list)
 
     export_parser = subparsers.add_parser(
@@ -157,22 +218,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     export_all_parser = subparsers.add_parser(
         "export-all",
-        help="Export every registered technology, optionally filtered by category.",
+        help="Export every registered technology, optionally filtered.",
     )
     export_all_parser.add_argument("--schema", choices=SCHEMA_CHOICES, default=None)
-    export_all_parser.add_argument(
-        "--category",
-        choices=sorted(_CATEGORY_ALIASES),
-        default=None,
-        help="Only export this category (aliases: hp, boiler, chp).",
-    )
+    _add_filter_arguments(export_all_parser)
     export_all_parser.add_argument(
         "--config",
         default=None,
         help=(
             "Load an ExportConfig JSON file (technology_ids/schema/output_dir); "
             "see config/data/default_scenario.json. Its technology_ids list "
-            "overrides --category if both are given."
+            "overrides --category/--variant/--scale if given."
         ),
     )
     export_all_parser.add_argument(

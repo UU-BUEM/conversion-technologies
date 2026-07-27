@@ -24,11 +24,11 @@ EXPECTED_FILES = [
     "src/conversion_technologies/cli.py",
     "src/conversion_technologies/core/technology.py",
     "src/conversion_technologies/core/registry.py",
-    "src/conversion_technologies/calliope_export/legacy_v051.py",
+    "src/conversion_technologies/core/validation.py",
     "src/conversion_technologies/calliope_export/modern.py",
-    "src/conversion_technologies/new/boiler/data/defaults.json",
-    "src/conversion_technologies/new/heat_pump/data/defaults.json",
-    "src/conversion_technologies/new/combined_heat_and_power/data/defaults.json",
+    "src/conversion_technologies/new/technologies.csv",
+    "src/conversion_technologies/new/costs.csv",
+    "src/conversion_technologies/core/csv_loader.py",
 ]
 
 
@@ -38,7 +38,17 @@ def _run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
 
 def check_conda_env(env_name: str) -> bool:
     print(f"[1/5] Conda environment '{env_name}' + core imports...")
-    result = _run(["conda", "run", "-n", env_name, "python", "-c", "import numpy, ruamel.yaml, conversion_technologies"])
+    result = _run(
+        [
+            "conda",
+            "run",
+            "-n",
+            env_name,
+            "python",
+            "-c",
+            "import numpy, ruamel.yaml, conversion_technologies",
+        ]
+    )
     ok = result.returncode == 0
     print("  OK" if ok else f"  FAILED\n{result.stderr}")
     return ok
@@ -46,8 +56,30 @@ def check_conda_env(env_name: str) -> bool:
 
 def check_cli(env_name: str) -> bool:
     print("[2/5] CLI (info / list)...")
-    info = _run(["conda", "run", "-n", env_name, "python", "-m", "conversion_technologies", "info"])
-    listing = _run(["conda", "run", "-n", env_name, "python", "-m", "conversion_technologies", "list"])
+    info = _run(
+        [
+            "conda",
+            "run",
+            "-n",
+            env_name,
+            "python",
+            "-m",
+            "conversion_technologies",
+            "info",
+        ]
+    )
+    listing = _run(
+        [
+            "conda",
+            "run",
+            "-n",
+            env_name,
+            "python",
+            "-m",
+            "conversion_technologies",
+            "list",
+        ]
+    )
     ok = info.returncode == 0 and listing.returncode == 0
     print("  OK" if ok else f"  FAILED\n{info.stderr}\n{listing.stderr}")
     return ok
@@ -55,7 +87,9 @@ def check_cli(env_name: str) -> bool:
 
 def check_pytest(env_name: str) -> bool:
     print("[3/5] pytest suite...")
-    result = _run(["conda", "run", "-n", env_name, "python", "-m", "pytest", "-q", "--tb=short"])
+    result = _run(
+        ["conda", "run", "-n", env_name, "python", "-m", "pytest", "-q", "--tb=short"]
+    )
     ok = result.returncode == 0
     print("  OK" if ok else f"  FAILED (non-fatal)\n{result.stdout}\n{result.stderr}")
     return ok
@@ -116,7 +150,9 @@ def check_structure() -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", default="conversion_env")
-    parser.add_argument("--full", action="store_true", help="Also build/run the Docker container.")
+    parser.add_argument(
+        "--full", action="store_true", help="Also build/run the Docker container."
+    )
     parser.add_argument("--skip-docker", action="store_true")
     args = parser.parse_args()
 

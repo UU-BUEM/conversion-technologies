@@ -28,9 +28,22 @@ bash setup.sh
 
 ## Config files
 
-Numeric defaults (capacity, cost, efficiency per deployment scale) live in
-each category's `data/defaults.json` under `src/conversion_technologies/new/`
-— never hardcode them in Python. See `CLAUDE.md` → "Extension points".
+Numeric defaults (capacity, lifetime, efficiency/COP/dispatch-factor inputs
+in `new/technologies.csv`; every `cost_*` value in `new/costs.csv`, joined
+by category/variant/scale) — never hardcode them in Python. See
+`CLAUDE.md` → "Extension points".
+
+**Editing the CSVs in LibreOffice Calc**: it will prompt "Use CSV format!"
+on save. Click it — that warning is about losing multiple
+sheets/formulas/formatting on save, none of which these files use, so
+nothing is lost for a flat single-table CSV.
+
+**Validation lives in source, not in tests.** If you're adding a new
+engineering bound (a min/max on a column), it belongs in
+`core/validation.py` + `TechnologySpec.__post_init__` (common bounds) or
+the relevant category's `specific/__init__.py` (technology-specific
+bounds) — a test should only assert that an out-of-range value raises
+`ValueError`, never be the sole place the bound is defined.
 
 ## Code quality
 

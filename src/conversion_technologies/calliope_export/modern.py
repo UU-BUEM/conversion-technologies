@@ -12,6 +12,13 @@ It is NOT sufficient for genuinely alternative/either-or carrier choices
 schema entirely; expressing it now requires hand-written "user-defined math".
 No technology in this package currently needs that, so exporters here raise
 nothing for it, but see docs/calliope_schema_mapping.md and .claude/open.md.
+
+``TechnologySpec.params`` is passed straight through here under its own
+keys (unknown here, uninvented) -- e.g. a ``technologies.csv`` column named
+``cost_flow_in`` becomes ``body["cost_flow_in"]`` with no code in this file
+naming it. This is deliberate: this exporter's naming already tracks
+current Calliope, so a future rename is a CSV-column edit, not a code
+change.
 """
 
 from __future__ import annotations
@@ -62,15 +69,11 @@ def export(tech: TechnologySpec) -> dict[str, Any]:
     body["flow_out_eff"] = _efficiency_field(tech.carriers_out)
 
     body["flow_cap_max"] = tech.flow_cap_max
-    if tech.flow_cap_min is not None:
-        body["flow_cap_min"] = tech.flow_cap_min
     body["lifetime"] = tech.lifetime
-
     body["cost_flow_cap"] = _cost_field(tech.cost_flow_cap)
-    if tech.cost_flow_om_annual is not None:
-        body["cost_flow_cap_annual"] = _cost_field(tech.cost_flow_om_annual)
-    if tech.cost_flow_out is not None:
-        body["cost_flow_out"] = _cost_field(tech.cost_flow_out)
+
+    for key, value in tech.params.items():
+        body[key] = _cost_field(value) if key.startswith("cost_") else value
 
     comment_parts = [tech.notes] if tech.notes else []
     if len(tech.carriers_in) > 1 or len(tech.carriers_out) > 1:

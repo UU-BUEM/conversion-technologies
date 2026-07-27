@@ -13,10 +13,12 @@
   it originates from COSMO-REA6's raw `T_2M`, ERA5-Land's `t2m` and
   MERRA-2's `T2M`, each already converted from Kelvin to Celsius by the
   weather module itself, so no unit conversion is needed on this side.
-- [weather-integration-scope] BY-DESIGN: the catalog builders
-  (`electric_heat_pump.py`, `geothermal_heat_pump.py`) stay zero-argument
-  and keep using a fixed design-point COP -- they must remain callable with
-  no arguments to fit `core.registry`'s builder contract. Computing a real
-  seasonal-average COP from an actual weather time series is left as a
-  downstream/notebook use of `carnot_cop`'s array form, not wired into the
-  registry. See open.md if this needs to become a first-class feature.
+- [weather-integration-scope] BY-DESIGN: the catalog builder
+  (`new/heat_pump/specific/__init__.py`'s `_build`) stays zero-argument
+  (called via `functools.partial(_build, row)`, no external inputs beyond
+  the CSV row) and keeps using a fixed design-point COP -- registration
+  happens at import time with no arguments, matching `core.registry`'s
+  builder contract. Computing a real seasonal-average COP from an actual
+  weather time series is left as a downstream/notebook use of
+  `carnot_cop`'s array form, not wired into the registry. See open.md if
+  this needs to become a first-class feature.
