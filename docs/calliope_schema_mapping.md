@@ -21,7 +21,7 @@ replaceable translation.
 ## Attribute mapping
 
 | Concept | Internal (`TechnologySpec`) | `legacy_v051` (Calliope v0.5.1) | `modern` (current Calliope) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Tech kind | *(implicit: >1 carrier each side is possible)* | `parent: conversion_plus` | `base_tech: conversion` |
 | Input carrier(s) | `carriers_in: dict[carrier, ratio]` | `carrier_in`, `carrier_in_2`, `carrier_in_3` (max 3, each `{carrier: ratio}`) | `carrier_in`: single string, or list if >1 |
 | Output carrier(s) | `carriers_out: dict[carrier, ratio]` | `carrier_out`, `carrier_out_2`, `carrier_out_3` (max 3) | `carrier_out`: single string, or list if >1 |

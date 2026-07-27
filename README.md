@@ -28,9 +28,78 @@ the full attribute mapping and known limitations.
 ```powershell
 .\setup.ps1                      # creates the conversion_env conda environment
 conversion-technologies info
-conversion-technologies list
+conversion-technologies list                                  # every registered technology
+conversion-technologies list --category hp                    # aliases: hp, boiler, chp
+
+# one technology -> one file
 conversion-technologies export heat_pump_electric_household -o outputs/hp.yaml
+
+# a whole category -> one combined file (path ends in .yaml/.yml)
+conversion-technologies export-all --category hp -o outputs/heat_pump.yaml
+
+# everything -> one file per technology (path is a directory)
 conversion-technologies export-all --schema legacy_v051 -o outputs/
+
+# an exact list of technologies + schema + output, from a JSON scenario file
+conversion-technologies export-all --config my_scenario.json
+```
+
+`--technology_id` (singular `export`) always takes an exact registry ID
+(`conversion-technologies list` to see them); `--category` (plural
+`export-all`) takes `hp`/`boiler`/`chp` and matches every scale. See
+"Input, output, and getting results" below for the full picture.
+
+## Input, output, and getting results
+
+**Input** is not a file you author from scratch — every technology already
+has a default configuration bundled with the package:
+`src/conversion_technologies/new/<category>/data/defaults.json` holds one
+entry per technology *and* per deployment scale (`household`/`building`/
+`community`): capacity, cost, lifetime, and efficiency/COP parameters. A
+`specific/<name>.py` module reads its entry and builds a `TechnologySpec`,
+registered under an id like `heat_pump_electric_household`.
+`conversion-technologies list` shows every registered id with its category,
+scale, and capacity.
+
+If you want to run a *specific, named export* (rather than one technology
+or "everything"), write a small JSON scenario file and pass `--config`:
+
+```json
+{
+  "technology_ids": ["heat_pump_electric_household", "boiler_gas_building"],
+  "schema": "modern",
+  "output_dir": "outputs/my_scenario"
+}
+```
+
+(see `src/conversion_technologies/config/data/default_scenario.json` for the
+full shape — an empty `technology_ids` list means "everything").
+
+**Output** is Calliope-ready YAML, written to disk by the CLI. Three ways to
+get it, depending on how much you want in one file:
+
+| Want | Command |
+| --- | --- |
+| One technology | `conversion-technologies export <technology_id> -o path.yaml` |
+| One category, one file | `conversion-technologies export-all --category hp -o heat_pump.yaml` |
+| One category, one file per tech | `conversion-technologies export-all --category hp -o some_dir/` |
+| Everything, or an exact scenario | `conversion-technologies export-all [--config scenario.json]` |
+
+Whether `-o`/`--output` produces one combined file or one file per
+technology is decided by its suffix: `.yaml`/`.yml` combines everything
+matched into a single `techs:` document; anything else is treated as a
+directory (created if missing) with one `<id>.yaml` file per technology.
+
+If you don't need a file on disk at all (e.g. you're scripting further
+processing in Python), skip the CLI and call the library directly:
+
+```python
+from conversion_technologies import new  # noqa: F401  (registers technologies)
+from conversion_technologies.calliope_export import EXPORTERS
+from conversion_technologies.core.registry import get_technology
+
+tech = get_technology("heat_pump_electric_household")
+body = EXPORTERS["modern"].export(tech)  # a plain dict, no YAML/file involved
 ```
 
 ## Repository layout
@@ -68,7 +137,7 @@ docker compose -f infrastructure/container/docker-compose.yml run conversion-tec
 ## Configuration
 
 | Variable | Default | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `CONVERSION_TECH_OUTPUT_DIR` | `outputs/` | Default directory for `export`/`export-all` output. |
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development workflow and

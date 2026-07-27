@@ -11,13 +11,28 @@ from conversion_technologies import (  # noqa: F401  (new registers technologies
     new,
 )
 from conversion_technologies.calliope_export import EXPORTERS, SCHEMA_CHOICES
-from conversion_technologies.calliope_export.writer import write_technology_yaml
+from conversion_technologies.calliope_export.writer import (
+    write_technology_yaml,
+    write_techs_yaml,
+)
+from conversion_technologies.config import load_export_config
 from conversion_technologies.core.registry import (
     all_technologies,
     get_technology,
     list_technology_ids,
 )
+from conversion_technologies.core.technology import TechnologySpec
 from conversion_technologies.settings import SETTINGS
+
+# Short, memorable aliases alongside the full category names used internally
+# (TechnologySpec.category). "hp" is what most people actually type.
+_CATEGORY_ALIASES = {
+    "hp": "heat_pump",
+    "heat_pump": "heat_pump",
+    "boiler": "boiler",
+    "chp": "combined_heat_and_power",
+    "combined_heat_and_power": "combined_heat_and_power",
+}
 
 
 def _cmd_info(_args: argparse.Namespace) -> int:
@@ -27,8 +42,18 @@ def _cmd_info(_args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_list(_args: argparse.Namespace) -> int:
-    for tech_id, tech in sorted(all_technologies().items()):
+def _filter_by_category(
+    techs: list[tuple[str, TechnologySpec]], category: str | None
+) -> list[tuple[str, TechnologySpec]]:
+    if category is None:
+        return techs
+    canonical = _CATEGORY_ALIASES[category]
+    return [(tid, t) for tid, t in techs if t.category == canonical]
+
+
+def _cmd_list(args: argparse.Namespace) -> int:
+    techs = _filter_by_category(sorted(all_technologies().items()), args.category)
+    for tech_id, tech in techs:
         print(
             f"{tech_id:32s} {tech.category:24s} "
             f"{tech.scale:10s} {tech.flow_cap_max:>8.1f} kW"
@@ -51,11 +76,41 @@ def _cmd_export(args: argparse.Namespace) -> int:
 
 
 def _cmd_export_all(args: argparse.Namespace) -> int:
-    output_dir = Path(args.output)
-    exporter = EXPORTERS[args.schema]
-    for tech_id, tech in sorted(all_technologies().items()):
+    schema = args.schema
+    output = args.output
+    technology_ids: list[str] | None = None
+
+    if args.config:
+        cfg = load_export_config(args.config)
+        technology_ids = cfg.technology_ids or None
+        schema = schema or cfg.schema
+        output = output or cfg.output_dir
+
+    schema = schema or "modern"
+    output = output or SETTINGS.output_dir
+    exporter = EXPORTERS[schema]
+
+    techs = sorted(all_technologies().items())
+    if technology_ids:
+        wanted = set(technology_ids)
+        techs = [(tid, t) for tid, t in techs if tid in wanted]
+    else:
+        techs = _filter_by_category(techs, args.category)
+
+    if not techs:
+        print("No technologies matched the given filters.")
+        return 1
+
+    output_path = Path(output)
+    if output_path.suffix in (".yaml", ".yml"):
+        bodies = {tid: exporter.export(t) for tid, t in techs}
+        path = write_techs_yaml(bodies, output_path)
+        print(f"Wrote {path} ({len(bodies)} technologies)")
+        return 0
+
+    for tid, tech in techs:
         body = exporter.export(tech)
-        path = write_technology_yaml(tech_id, body, output_dir / f"{tech_id}.yaml")
+        path = write_technology_yaml(tid, body, output_path / f"{tid}.yaml")
         print(f"Wrote {path}")
     return 0
 
@@ -79,6 +134,12 @@ def build_parser() -> argparse.ArgumentParser:
     info_parser.set_defaults(func=_cmd_info)
 
     list_parser = subparsers.add_parser("list", help="List registered technologies.")
+    list_parser.add_argument(
+        "--category",
+        choices=sorted(_CATEGORY_ALIASES),
+        default=None,
+        help="Filter by category (aliases: hp, boiler, chp).",
+    )
     list_parser.set_defaults(func=_cmd_list)
 
     export_parser = subparsers.add_parser(
@@ -95,14 +156,34 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.set_defaults(func=_cmd_export)
 
     export_all_parser = subparsers.add_parser(
-        "export-all", help="Export every registered technology."
+        "export-all",
+        help="Export every registered technology, optionally filtered by category.",
     )
-    export_all_parser.add_argument("--schema", choices=SCHEMA_CHOICES, default="modern")
+    export_all_parser.add_argument("--schema", choices=SCHEMA_CHOICES, default=None)
+    export_all_parser.add_argument(
+        "--category",
+        choices=sorted(_CATEGORY_ALIASES),
+        default=None,
+        help="Only export this category (aliases: hp, boiler, chp).",
+    )
+    export_all_parser.add_argument(
+        "--config",
+        default=None,
+        help=(
+            "Load an ExportConfig JSON file (technology_ids/schema/output_dir); "
+            "see config/data/default_scenario.json. Its technology_ids list "
+            "overrides --category if both are given."
+        ),
+    )
     export_all_parser.add_argument(
         "-o",
         "--output",
-        default=SETTINGS.output_dir,
-        help="Output directory (default: %(default)s)",
+        default=None,
+        help=(
+            "Output directory (one file per technology) or a single "
+            "<name>.yaml/.yml path (all matched technologies combined "
+            "into one file). Default: <output_dir>/ or the --config value."
+        ),
     )
     export_all_parser.set_defaults(func=_cmd_export_all)
 

@@ -24,6 +24,13 @@
 - [dependencies] BY-DESIGN: `ruamel.yaml` was added (not in `weather`/`occupancy`)
   because comment-preserving, readable YAML output is this package's actual
   deliverable. No pydantic — dataclasses match sibling convention.
+- [cli-category-filter] `--category` (aliases `hp`/`boiler`/`chp`) added to
+  `list` and `export-all`; `export-all`'s `--config path.json` now consumes
+  `ExportConfig` (its `technology_ids` overrides `--category` if both given).
+  `export-all -o <dir>/` still writes one file per technology; `-o
+  name.yaml` combines every matched technology into a single `techs:`
+  document via `calliope_export.writer.write_techs_yaml` — decided by the
+  output path's suffix, not a separate flag.
 - [repo] Pushed to `github.com/UU-BUEM/conversion-technologies` (public,
   `main` branch). The first CI run failed in 8s because `.gitignore`'s
   unanchored `env/`/`data/` patterns had silently excluded
