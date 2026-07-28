@@ -8,6 +8,7 @@ channels:
 dependencies:
   - python=3.12
   - numpy=1.26.*
+  - pandas=2.*
   - pytest=8.*
   - pytest-cov=5.*
   - pip
