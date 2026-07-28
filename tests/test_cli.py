@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from conversion_technologies.cli import main
 
 
@@ -181,9 +183,84 @@ def test_export_all_config_file_selects_exact_technology_ids(tmp_path: Path) -> 
         ["export-all", "--config", str(config_path), "-o", str(output_dir)]
     )
     assert exit_code == 0
-    written = {p.stem for p in output_dir.glob("*.yaml")}
+    # additional_math.yaml (the multi-carrier-ratio fix, triggered here since
+    # heat_pump_electric_household has two input carriers) is a real file but
+    # not a per-technology export -- excluded from this "which technologies
+    # got written" check.
+    written = {p.stem for p in output_dir.glob("*.yaml") if p.stem != "additional_math"}
     assert written == {"heat_pump_electric_household", "boiler_gas_household"}
     body = (output_dir / "heat_pump_electric_household.yaml").read_text(
         encoding="utf-8"
     )
     assert "base_tech: conversion" in body  # modern schema, per the config file
+
+
+def test_export_writes_additional_math_for_a_multi_carrier_technology(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "hp.yaml"
+    exit_code = main(["export", "heat_pump_electric_household", "-o", str(output)])
+    assert exit_code == 0
+    math_path = tmp_path / "hp.additional_math.yaml"
+    assert math_path.exists()
+    text = math_path.read_text(encoding="utf-8")
+    assert "carrier_flow_ratio_in" in text
+    assert "balance_conversion" in text
+
+
+def test_export_no_custom_math_flag_skips_the_math_file(tmp_path: Path) -> None:
+    output = tmp_path / "hp.yaml"
+    exit_code = main(
+        [
+            "export",
+            "heat_pump_electric_household",
+            "-o",
+            str(output),
+            "--no-custom-math",
+        ]
+    )
+    assert exit_code == 0
+    assert not (tmp_path / "hp.additional_math.yaml").exists()
+
+
+def test_export_all_boiler_only_writes_no_math_file(tmp_path: Path, capsys) -> None:
+    output = tmp_path / "boilers.yaml"
+    exit_code = main(["export-all", "--category", "boiler", "-o", str(output)])
+    assert exit_code == 0
+    assert not (tmp_path / "boilers.additional_math.yaml").exists()
+    assert "No custom math needed" in capsys.readouterr().out
+
+
+def test_export_all_directory_mode_writes_one_shared_math_file(tmp_path: Path) -> None:
+    exit_code = main(["export-all", "--category", "hp", "-o", str(tmp_path)])
+    assert exit_code == 0
+    math_path = tmp_path / "additional_math.yaml"
+    assert math_path.exists()
+    text = math_path.read_text(encoding="utf-8")
+    assert "heat_pump_electric_household" in text
+    assert "heat_pump_geothermal_household" in text
+
+
+def test_weather_cop_command_writes_three_files(tmp_path: Path) -> None:
+    index = pd.date_range("2018-01-01 00:00:00", "2018-12-31 23:00:00", freq="h")
+    weather_csv = tmp_path / "weather.csv"
+    pd.DataFrame({"T": [8.0] * len(index)}, index=index).rename_axis("datetime").to_csv(
+        weather_csv
+    )
+    output_dir = tmp_path / "out"
+    exit_code = main(
+        [
+            "weather-cop",
+            "heat_pump_electric_household",
+            "--csv",
+            str(weather_csv),
+            "--year",
+            "2018",
+            "-o",
+            str(output_dir),
+        ]
+    )
+    assert exit_code == 0
+    assert (output_dir / "heat_pump_electric_household_flow_out_eff.csv").exists()
+    assert (output_dir / "heat_pump_electric_household_flow_in_eff.csv").exists()
+    assert (output_dir / "heat_pump_electric_household_data_tables.yaml").exists()

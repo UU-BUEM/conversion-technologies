@@ -11,6 +11,12 @@ that an out-of-range CSV value raises ``ValueError``.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
+
+import numpy as np
+from numpy.typing import NDArray
+
 # Generous, order-of-magnitude sanity ceilings on installed capacity per
 # deployment scale, in kW -- catch a CSV typo (an extra digit, a misplaced
 # scale) without constraining legitimate research variation. Shared across
@@ -56,6 +62,61 @@ def require_positive_costs(params: dict[str, float], *, tech_id: str) -> None:
     for key, value in params.items():
         if key.startswith("cost_") and key != "cost_interest_rate" and value <= 0:
             raise ValueError(f"Technology '{tech_id}': {key}={value} must be positive.")
+
+
+def require_no_nan(
+    values: NDArray[np.float64],
+    *,
+    name: str,
+    tech_id: str,
+    labels: Sequence[Any] | None = None,
+) -> NDArray[np.float64]:
+    """Raise ``ValueError`` if any element of ``values`` is NaN; else return it.
+
+    ``labels`` (e.g. timestamps parallel to ``values``) makes the error name
+    *which* element is bad instead of just how many.
+    """
+    nan_mask = np.isnan(values)
+    if nan_mask.any():
+        count = int(nan_mask.sum())
+        first = int(np.argmax(nan_mask))
+        where = f"{labels[first]!r}" if labels is not None else f"index {first}"
+        raise ValueError(
+            f"Technology '{tech_id}': {name} is NaN at {count} of {values.size} "
+            f"timestep(s), first at {where}."
+        )
+    return values
+
+
+def require_range_array(
+    values: NDArray[np.float64],
+    lo: float,
+    hi: float,
+    *,
+    name: str,
+    tech_id: str,
+    labels: Sequence[Any] | None = None,
+    inclusive_lo: bool = True,
+    inclusive_hi: bool = True,
+) -> NDArray[np.float64]:
+    """Elementwise ``require_range``: raise ``ValueError`` naming how many
+    timesteps are out of ``[lo, hi]`` and the first offending one.
+    """
+    lo_ok = values >= lo if inclusive_lo else values > lo
+    hi_ok = values <= hi if inclusive_hi else values < hi
+    bad_mask = ~(lo_ok & hi_ok)
+    if bad_mask.any():
+        count = int(bad_mask.sum())
+        first = int(np.argmax(bad_mask))
+        lo_sym = "<=" if inclusive_lo else "<"
+        hi_sym = "<=" if inclusive_hi else "<"
+        where = f"{labels[first]!r}" if labels is not None else f"index {first}"
+        raise ValueError(
+            f"Technology '{tech_id}': {name} is out of range "
+            f"({lo} {lo_sym} {name} {hi_sym} {hi}) at {count} of {values.size} "
+            f"timestep(s), first at {where} (value={values[first]})."
+        )
+    return values
 
 
 def require_scale_capacity(

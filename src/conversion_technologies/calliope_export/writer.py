@@ -39,3 +39,24 @@ def dump_technology_yaml(tech_id: str, body: dict[str, Any]) -> str:
 def write_technology_yaml(tech_id: str, body: dict[str, Any], path: Path) -> Path:
     """Write the rendered YAML for a single ``tech_id`` to ``path``."""
     return write_techs_yaml({tech_id: body}, path)
+
+
+def dump_yaml_document(document: dict[str, Any]) -> str:
+    """Render an arbitrary top-level YAML document.
+
+    Unlike :func:`dump_techs_yaml`, does not wrap ``document`` under a
+    ``techs:`` key -- for content that already has its own top-level shape,
+    e.g. :func:`conversion_technologies.calliope_export.ratio_math.
+    build_ratio_math`'s ``{"parameters": ..., "constraints": ...}`` (a
+    Calliope "additional math" file) or a ``{"data_tables": ...}`` block.
+    """
+    stream = StringIO()
+    _yaml.dump(document, stream)
+    return stream.getvalue()
+
+
+def write_yaml_document(document: dict[str, Any], path: Path) -> Path:
+    """Write :func:`dump_yaml_document`'s rendering of ``document`` to ``path``."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(dump_yaml_document(document), encoding="utf-8")
+    return path

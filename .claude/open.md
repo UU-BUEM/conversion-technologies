@@ -12,7 +12,16 @@
   (Cost parameter names -- `cost_flow_cap`, `cost_om_annual`,
   `cost_flow_in`, `cost_flow_out`, `cost_interest_rate` -- *are* now
   confirmed against Calliope's math docs; this item is about carrier/
-  efficiency syntax specifically, not costs.)
+  efficiency syntax specifically, not costs.) **Update:** the deeper part of
+  this -- that per-carrier efficiency alone doesn't enforce a fixed ratio on
+  a multi-carrier side -- is now fixed by `calliope_export/ratio_math.py`
+  (see root `.claude/resolved.md` "ratio-math-fix"), verified algebraically
+  against Calliope's own `balance_conversion` math and its official CHP
+  example. Still not verified against an actual Calliope solve (none
+  available here) -- same "spot-check before relying on it" caveat applies
+  to `ratio_math.py`'s output and to `new/heat_pump/weather_cop.py`'s
+  `data_tables:` YAML shape (see `docs/calliope_schema_mapping.md`
+  "Weather-driven COP profiles" for the specific place that one is hedged).
 - [existing] `existing/fireplace.py` (occupancy+weather-driven simulation of
   incumbent stock) is untouched and out of scope — see resolved.md.
 - [csv-input] `CONVERSION_TECH_PARAMS_DIR` replaces the whole

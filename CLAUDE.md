@@ -8,7 +8,14 @@ power (CHP) — from household to community scale. Sibling to `UU-BUEM/weather`
 and `UU-BUEM/occupancy` (same packaging/tooling conventions).
 
 Feeds into a [Calliope](https://github.com/calliope-project/calliope) energy
-system model as per-technology YAML files under a `techs:` key.
+system model as per-technology YAML files under a `techs:` key, plus (for
+any technology with more than one carrier on one side, e.g. heat pump or
+CHP) an accompanying `additional_math.yaml` a real solve actually needs to
+respect that technology's fixed carrier ratio — see
+`docs/calliope_schema_mapping.md` "Carrier ratio math", "Weather-driven COP
+profiles", and "Units, currency, and Calliope version" for the full
+reference (including which Calliope version/pin this targets — it's still
+pre-release).
 
 ## Operating rules for Claude Code
 
@@ -33,18 +40,29 @@ src/conversion_technologies/
 │   │                     #   costs.csv, joined, or the CONVERSION_TECH_PARAMS_DIR
 │   │                     #   override; blanks -> None) + passthrough_params()
 │   │                     #   (row -> TechnologySpec.params)
+│   ├── weather_series.py # read_hourly_series() / align_to_year() -- generic hourly
+│   │                     #   CSV read+validate+align (pandas), no dependency on the
+│   │                     #   weather package itself, only on its documented CSV shape
 │   └── data_loader.py    # importlib.resources JSON loader (used by config/ only)
 ├── calliope_export/
 │   ├── modern.py          # -> conversion, flow_* naming (current Calliope; the
 │   │                      #   only exporter -- legacy_v051 was removed, see
 │   │                      #   .claude/resolved.md)
-│   └── writer.py          # ruamel.yaml dump: one tech or several combined into one `techs:` file
+│   ├── ratio_math.py      # build_ratio_math() -- the accompanying Calliope custom
+│   │                      #   math a multi-carrier technology (heat pump, CHP) needs
+│   │                      #   so a solve actually respects its fixed carrier ratio;
+│   │                      #   see docs/calliope_schema_mapping.md "Carrier ratio math"
+│   └── writer.py          # ruamel.yaml dump: techs file(s), plus write_yaml_document()
+│                          #   for ratio_math/data_tables output
 ├── config/                # ExportConfig: which techs / schema / output dir for a batch run
 ├── new/                   # candidate technologies -- THIS package's focus
 │   ├── technologies.csv    # capacity/lifetime/efficiency/COP inputs -- THE input file
 │   ├── costs.csv             # every cost_* column, joined to technologies.csv by key
 │   ├── boiler/{generic,specific}
-│   ├── heat_pump/{generic,specific}
+│   ├── heat_pump/{generic,specific,weather_cop.py}  # weather_cop.py: opt-in real
+│   │                      #   (not fixed-design-point) hourly COP from a weather CSV,
+│   │                      #   see docs/calliope_schema_mapping.md "Weather-driven COP
+│   │                      #   profiles" -- deliberately NOT wired into the registry
 │   └── combined_heat_and_power/{generic,specific}
 ├── existing/              # OUT OF SCOPE: fireplace.py, a bottom-up occupancy+weather
 │                          #   driven simulation of already-installed stock. Different
@@ -137,7 +155,12 @@ python validate.py
 
 See `.claude/open.md` (cross-cutting) and `.claude/<category>/open.md`
 (per-category). Notably: the `modern` exporter's per-carrier
-`flow_in_eff`/`flow_out_eff` approach covers every technology currently in
-this package (fixed linear ratios), but genuinely alternative/either-or
-carrier choices would need hand-written Calliope "user-defined math" — not
-implemented here, flagged in `docs/calliope_schema_mapping.md`.
+`flow_in_eff`/`flow_out_eff` alone does **not** correctly enforce a
+technology's fixed carrier ratio once it has more than one carrier on a
+side (heat pump, CHP) — `ratio_math.py` generates the accompanying custom
+math a real solve needs; see `docs/calliope_schema_mapping.md` "Carrier
+ratio math" for the worked derivation of why, and its caveat that this was
+verified algebraically, not against a running Calliope solve. Genuinely
+alternative/either-or carrier choices (not the fixed-ratio case above)
+would need different hand-written Calliope "user-defined math" — still not
+implemented here.

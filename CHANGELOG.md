@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Multi-carrier technologies (heat pump, CHP) now export the Calliope
+  math a solve actually needs to respect their fixed carrier ratio.**
+  Calliope's base `balance_conversion` constraint sums flow across carriers
+  on each side rather than pinning them individually -- worked through with
+  real numbers, the previous `flow_in_eff`/`flow_out_eff`-only export left
+  a heat pump's COP-implied electricity/ambient-heat split unenforced, and
+  made CHP's base balance double-count fuel input once both output
+  carriers had a real efficiency. `export`/`export-all` now also write an
+  `additional_math.yaml` (`calliope_export.ratio_math.build_ratio_math`,
+  default on, `--no-custom-math` to skip) generalising the fix Calliope's
+  own official CHP example uses. See `docs/calliope_schema_mapping.md`
+  "Carrier ratio math" for the full derivation; not yet verified against a
+  running Calliope solve.
+
+### Added
+
+- **`weather-cop` CLI command** (`new.heat_pump.weather_cop.
+  export_weather_cop`): a real hourly heat pump COP from an actual weather
+  temperature CSV, exported as Calliope `data_tables:` YAML -- separate
+  from, and does not change, the registry's fixed design-point COP. New
+  `core.weather_series` module reads/validates/aligns the hourly CSV
+  (own lightweight reader, not a dependency on the `weather` package).
+- Explicit units/currency/timestep convention (USD, kW, kWh, 1 hour) and
+  the exact Calliope version this package's schema targets, both previously
+  implicit -- see `docs/calliope_schema_mapping.md` "Units, currency, and
+  Calliope version".
+
+### Changed
+
+- Added `pandas>=2.0,<3` as a dependency (for the `weather-cop` command's
+  timeseries handling only -- the rest of the package is unaffected).
+
 ## [0.2.0] - 2026-07-27
 
 ### Removed

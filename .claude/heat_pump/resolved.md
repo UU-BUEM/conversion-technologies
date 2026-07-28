@@ -18,7 +18,20 @@
   (called via `functools.partial(_build, row)`, no external inputs beyond
   the CSV row) and keeps using a fixed design-point COP -- registration
   happens at import time with no arguments, matching `core.registry`'s
-  builder contract. Computing a real seasonal-average COP from an actual
-  weather time series is left as a downstream/notebook use of
-  `carnot_cop`'s array form, not wired into the registry. See open.md if
-  this needs to become a first-class feature.
+  builder contract. A real, weather-driven COP is deliberately a *separate*
+  entry point instead -- see [weather-cop-entry-point] below -- not a
+  change to this builder or the registry contract.
+- [weather-cop-entry-point] BY-DESIGN: real hourly COP from an actual
+  weather time series is now a first-class feature
+  (`new/heat_pump/weather_cop.py`, also the `weather-cop` CLI subcommand),
+  per explicit user request -- but implemented as the "new, non-catalog
+  entry point" [weather-integration-scope] above anticipated, not by giving
+  the registry builder arguments. It re-derives the design sink temperature
+  and quality factor from `technologies.csv` for the requested id (same
+  source `_build` reads, not retyped by the caller) rather than adding new
+  `TechnologySpec` fields for them. Reads its weather CSV directly (via
+  `core.weather_series`, `pandas`) rather than depending on the `weather`
+  package itself -- see root `.claude/resolved.md`
+  "weather-series-own-reader" for why. See open.md: this only ever applies
+  to the air-source (`electric`) variant in practice, since there is no
+  ground-temperature data source for `geothermal`.

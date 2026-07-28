@@ -61,3 +61,6 @@ push.ps1
 
 # Ad hoc local notes
 conversion_technologies_improvement*.txt
+
+# Claude Code runtime state (per-session lock file, not project data)
+.claude/scheduled_tasks.lock

@@ -1,17 +1,15 @@
 # Open items — heat_pump
 
-- COP is currently a single design-point value per catalog technology
-  (`carnot_cop` at one source/sink temperature pair), not a real
-  temperature-weighted seasonal average. `generic/cop_calculation.py`'s
-  `carnot_cop` now accepts an array of source temperatures directly (e.g. a
-  real hourly `T` series from the weather module's
-  `CsvWeatherData.extract_weather_columns()` -- see resolved.md), but the
-  category builder (`new/heat_pump/specific/__init__.py`) doesn't wire a
-  real weather source in yet; it uses one fixed design-point temperature
-  pair per `technologies.csv` row. Deliberately deferred (see resolved.md
-  "weather-integration-scope") -- registration happens at import time with
-  no arguments, so wiring a real series in would need a new, non-catalog
-  entry point, not a change to the existing builder.
+- **No ground/soil temperature data source exists, permanently.** The
+  weather module has no ground/soil temperature output anywhere (only 2 m
+  air temperature) -- confirmed by direct inspection of its source, not an
+  oversight. `heat_pump_geothermal_*`'s `design_source_temp_c` therefore
+  stays a fixed, non-weather-driven assumption even though
+  `new/heat_pump/weather_cop.py` (see resolved.md "weather-cop-entry-point")
+  works for any registered heat pump id structurally -- there is simply
+  nothing to point it at for the geothermal variant. Would need a real
+  soil-temperature data source added to `weather` (or elsewhere) first, not
+  a code change here.
 - No water-source (surface water/wastewater) heat pump variant yet.
 - Design source/sink temperatures in `technologies.csv` are NL-climate
   assumptions (2C air / 10C ground design source, 45C low-temp sink) --

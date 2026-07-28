@@ -152,3 +152,76 @@
   UU-BUEM/conversion-technologies` if a future push mysteriously fails fast
   again, since an unanchored gitignore pattern is an easy repeat mistake
   when adding a new nested `data/` or `env/` directory.
+- [ratio-math-fix] BY-DESIGN: `calliope_export/ratio_math.py` generates the
+  Calliope "additional math" (a `link_flow_in_carriers`/
+  `link_flow_out_carriers` equality constraint + a scoped
+  `balance_conversion` override) a real solve needs to actually respect a
+  multi-carrier technology's fixed carrier ratio -- per explicit user
+  request ("fix everything"), not left as documentation-only. Verified
+  algebraically against Calliope's own base math (`balance_conversion` sums
+  across carriers, it doesn't pin their split) and cross-checked against
+  Calliope's own official CHP example, which needs the same two-part fix
+  (`heat_to_power_ratio` + `link_chp_outputs` + a `balance_conversion`
+  override) -- generalised here to be driven structurally (`len(carriers) >
+  1` on either side) instead of hardcoded per technology name, and
+  symmetric for the input side (heat pump) as well as the output side
+  (CHP). Boiler is untouched (one carrier per side). Driven entirely off
+  `TechnologySpec.carriers_in`/`carriers_out`/`primary_carrier_in`/
+  `primary_carrier_out` -- no new CSV column. `export`/`export-all` write it
+  automatically as `additional_math.yaml` (default on; `--no-custom-math`
+  opts out) -- a correctness fix, not an opt-in nicety. Full derivation:
+  `docs/calliope_schema_mapping.md` "Carrier ratio math". Not validated
+  against a running Calliope solve (none available here) -- stated
+  explicitly wherever this is documented, not silently assumed correct.
+- [weather-series-own-reader] BY-DESIGN: `core/weather_series.py` (a new
+  `pandas` dependency) reads the weather CSV contract `weather.export.
+  export_single_point_csv()` already documents itself, rather than
+  depending on the `weather` package. Reason: `weather` pulls in netCDF4,
+  xarray, cfgrib, eccodes, dask, pyproj, scipy -- a large, geospatial
+  dependency footprint disproportionate to what's needed here (one
+  timestamp-indexed temperature column). This *is* the "internal data
+  transfer, not an API" answer to an explicit user question -- both
+  packages are local, same-org, same-machine; `weather` already produces a
+  file shaped for exactly this, so no network/API layer was considered.
+  `existing/fireplace.py`'s `TYPE_CHECKING`-only import of
+  `buem_weather`/`buem_occupancy` (a stale package name --
+  `weather`'s own actual package/import name is `weather`) was
+  deliberately *not* copied as a pattern for this reason too.
+- [occupancy-out-of-scope] BY-DESIGN: `occupancy`'s `total_power_kwh` is not
+  wired into anything here, and this package does not export a Calliope
+  `demand` technology for it -- stays conversion-technologies only, per
+  explicit user decision. A heat pump's electricity draw is a
+  Calliope-optimizer decision, not normally an exogenous profile;
+  `occupancy`'s output would become a *separate* `demand` tech's
+  `sink_use_equals` sharing a node with the technologies here, hand-wired
+  by whoever builds the full model -- not something this package generates.
+  `occupancy` itself has zero Calliope integration and no community scale.
+  Documented, not implemented: `docs/calliope_schema_mapping.md`
+  "occupancy is out of scope".
+- [stale-version-file] Not a bug in this repo's config, confirmed by
+  investigation: `conversion-technologies info`/`--version` reported
+  `0.1.1.dev2+g7dad1f93d...` (referencing old commit `7dad1f9`) despite
+  `v0.2.0` already being tagged and `git describe --tags` correctly
+  resolving to it. `src/conversion_technologies/_version.py` is
+  `setuptools_scm`-generated at *install* time (correctly gitignored, not
+  tracked -- see `.gitignore`'s "setuptools-scm generated version file"
+  entry); it does not regenerate itself just because a new commit or tag
+  lands. Fix: re-run `pip install -e . --no-deps` (same command
+  `CONTRIBUTING.md`'s dev setup already documents) to recompute it from
+  current git state. If the working tree has uncommitted changes when you
+  do this, expect a `devN+g<hash>.d<date>` version (e.g.
+  `0.2.1.dev0+g24a2d4e89.d20260728`), not a bare `X.Y.Z` -- that's
+  `setuptools_scm`'s "guess-next-dev" + "node-and-date" schemes working as
+  intended (CONTRIBUTING.md "Releasing"), not a second bug; a clean `X.Y.Z`
+  only shows with a clean tree exactly at that tag.
+- [units-currency-convention] BY-DESIGN: this package's units, stated
+  explicitly for the first time (previously implicit): USD for every
+  `cost_*` value, kW for capacity/flow, kWh for energy, 1-hour timestep.
+  Calliope itself is confirmed unit/currency-agnostic (fetched from its own
+  docs) -- this is a stated modeler convention, not a Calliope requirement,
+  and matches `weather`'s and `occupancy`'s native hourly resolution
+  exactly (no resampling needed when wiring either in). See
+  `docs/calliope_schema_mapping.md` "Units, currency, and Calliope
+  version", which also states the exact Calliope version/pin this package
+  targets (`0.7.0.devN`, pre-release -- bare `pip install calliope` resolves
+  to incompatible old `0.6.10`).

@@ -11,9 +11,11 @@ from conversion_technologies import (  # noqa: F401  (new registers technologies
     new,
 )
 from conversion_technologies.calliope_export import EXPORTERS, SCHEMA_CHOICES
+from conversion_technologies.calliope_export.ratio_math import build_ratio_math
 from conversion_technologies.calliope_export.writer import (
     write_technology_yaml,
     write_techs_yaml,
+    write_yaml_document,
 )
 from conversion_technologies.config import load_export_config
 from conversion_technologies.core.registry import (
@@ -101,6 +103,35 @@ def _cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def _math_output_path(output_path: Path, *, is_directory: bool) -> Path:
+    """Where the accompanying ``additional_math.yaml`` goes for a given
+    techs-YAML output path -- same directory, ``additional_math.yaml`` next
+    to a directory of per-tech files, or ``<stem>.additional_math.yaml``
+    next to one combined/single techs file (matches Calliope's own naming
+    for this kind of file, see ``docs/calliope_schema_mapping.md``).
+    """
+    if is_directory:
+        return output_path / "additional_math.yaml"
+    return output_path.with_name(f"{output_path.stem}.additional_math.yaml")
+
+
+def _maybe_write_ratio_math(
+    techs: list[TechnologySpec], math_path: Path, *, no_custom_math: bool
+) -> None:
+    """Write the multi-carrier-ratio fix (see ``ratio_math.build_ratio_math``)
+    alongside a techs export, unless ``--no-custom-math`` was passed.
+    Prints a message either way, so its absence is visible, not silent.
+    """
+    if no_custom_math:
+        return
+    math = build_ratio_math(techs)
+    if math is None:
+        print("No custom math needed for this export.")
+        return
+    path = write_yaml_document(math, math_path)
+    print(f"Wrote {path}")
+
+
 def _cmd_export(args: argparse.Namespace) -> int:
     tech = get_technology(args.technology_id)
     exporter = EXPORTERS[args.schema]
@@ -112,6 +143,11 @@ def _cmd_export(args: argparse.Namespace) -> int:
     )
     path = write_technology_yaml(tech.id, body, output)
     print(f"Wrote {path}")
+    _maybe_write_ratio_math(
+        [tech],
+        _math_output_path(output, is_directory=False),
+        no_custom_math=args.no_custom_math,
+    )
     return 0
 
 
@@ -146,11 +182,41 @@ def _cmd_export_all(args: argparse.Namespace) -> int:
         bodies = {tid: exporter.export(t) for tid, t in techs}
         path = write_techs_yaml(bodies, output_path)
         print(f"Wrote {path} ({len(bodies)} technologies)")
+        _maybe_write_ratio_math(
+            [t for _, t in techs],
+            _math_output_path(output_path, is_directory=False),
+            no_custom_math=args.no_custom_math,
+        )
         return 0
 
     for tid, tech in techs:
         body = exporter.export(tech)
         path = write_technology_yaml(tid, body, output_path / f"{tid}.yaml")
+        print(f"Wrote {path}")
+    _maybe_write_ratio_math(
+        [t for _, t in techs],
+        _math_output_path(output_path, is_directory=True),
+        no_custom_math=args.no_custom_math,
+    )
+    return 0
+
+
+def _cmd_weather_cop(args: argparse.Namespace) -> int:
+    # Imported here, not at module level: this is the one CLI command that
+    # needs pandas (via new.heat_pump.weather_cop), which every other
+    # command has no reason to import.
+    from conversion_technologies.new.heat_pump.weather_cop import export_weather_cop
+
+    output_dir = args.output or SETTINGS.output_dir
+    paths = export_weather_cop(
+        args.technology_id,
+        args.weather_csv,
+        output_dir,
+        year=args.year,
+        temperature_column=args.temperature_column,
+        max_missing_fraction=args.max_missing_fraction,
+    )
+    for path in paths.values():
         print(f"Wrote {path}")
     return 0
 
@@ -214,6 +280,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Output YAML path (default: <output_dir>/<technology_id>.yaml)",
     )
+    export_parser.add_argument(
+        "--no-custom-math",
+        action="store_true",
+        help=(
+            "Skip generating the accompanying Calliope 'additional math' that "
+            "fixes multi-carrier ratio enforcement (see "
+            "docs/calliope_schema_mapping.md 'Carrier ratio math')."
+        ),
+    )
     export_parser.set_defaults(func=_cmd_export)
 
     export_all_parser = subparsers.add_parser(
@@ -241,7 +316,72 @@ def build_parser() -> argparse.ArgumentParser:
             "into one file). Default: <output_dir>/ or the --config value."
         ),
     )
+    export_all_parser.add_argument(
+        "--no-custom-math",
+        action="store_true",
+        help=(
+            "Skip generating the accompanying Calliope 'additional math' that "
+            "fixes multi-carrier ratio enforcement (see "
+            "docs/calliope_schema_mapping.md 'Carrier ratio math')."
+        ),
+    )
     export_all_parser.set_defaults(func=_cmd_export_all)
+
+    weather_cop_parser = subparsers.add_parser(
+        "weather-cop",
+        help=(
+            "Compute a real hourly heat pump COP from a weather CSV and export "
+            "it as Calliope data_tables (see docs/calliope_schema_mapping.md "
+            "'Weather-driven COP profiles')."
+        ),
+    )
+    weather_cop_parser.add_argument(
+        "technology_id",
+        help="A registered heat_pump technology id, e.g. heat_pump_electric_household.",
+    )
+    weather_cop_parser.add_argument(
+        "--csv",
+        dest="weather_csv",
+        required=True,
+        help=(
+            "Weather CSV path -- the format weather.export."
+            "export_single_point_csv() produces (timestamp column + a "
+            "temperature column)."
+        ),
+    )
+    weather_cop_parser.add_argument(
+        "--year",
+        required=True,
+        type=int,
+        help="Modelling year to align the weather series to.",
+    )
+    weather_cop_parser.add_argument(
+        "--temperature-column",
+        default="T",
+        help=(
+            "Name of the 2 m outdoor-air temperature column in the weather "
+            "CSV (default: T, weather's own harmonised name across "
+            "providers -- raw per-provider exports use T_2M/t2m/T2M "
+            "instead). NOT ground/soil temperature -- weather has none."
+        ),
+    )
+    weather_cop_parser.add_argument(
+        "--max-missing-fraction",
+        type=float,
+        default=0.0,
+        help=(
+            "Fraction of the target year's hourly timestamps allowed to be "
+            "missing from the weather CSV after alignment (default: 0.0, i.e. "
+            "require complete coverage)."
+        ),
+    )
+    weather_cop_parser.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Output directory (default: <output_dir>/).",
+    )
+    weather_cop_parser.set_defaults(func=_cmd_weather_cop)
 
     return parser
 

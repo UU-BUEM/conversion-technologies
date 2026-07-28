@@ -10,4 +10,8 @@
   multi-carrier conversion tech. See `generic/alpha_beta.py`.
 - BY-DESIGN: `primary_carrier_out` is electricity (not heat) for both CHP
   technologies, since electricity is conventionally the "primary" product
-  costed/associated in a CHP unit's economics.
+  costed/associated in a CHP unit's economics. This field turned out to
+  matter beyond naming/cost placement: `calliope_export/ratio_math.py`
+  (root `.claude/resolved.md` "ratio-math-fix") uses it directly to know
+  which output carrier heat gets tied to -- no CHP-specific code needed
+  there because this was already set.
