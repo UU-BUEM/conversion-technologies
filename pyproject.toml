@@ -30,6 +30,15 @@ dependencies = [
     "numpy>=1.26,<3",
     "pandas>=2.0,<3",
     "ruamel.yaml>=0.18,<1",
+    # weather (https://github.com/UU-BUEM/weather) -- compulsory (2026-07-28):
+    # weather-cop's hourly heat pump COP comes from its real per-location
+    # get_point_weather() fetch, no bundled/CSV fallback -- matches how
+    # UU-BUEM/buem treats this same dependency. `pointquery` only (not
+    # `solar`): COP only needs T, no irradiance. Not on PyPI/conda yet, so a
+    # direct git reference (PEP 508), tracked at @main -- see
+    # infrastructure/env/conversion_env.yml's header comment for the
+    # reproducibility trade-off.
+    "weather[pointquery] @ git+https://github.com/UU-BUEM/weather.git@main",
 ]
 
 [project.optional-dependencies]

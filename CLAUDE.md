@@ -40,9 +40,6 @@ src/conversion_technologies/
 │   │                     #   costs.csv, joined, or the CONVERSION_TECH_PARAMS_DIR
 │   │                     #   override; blanks -> None) + passthrough_params()
 │   │                     #   (row -> TechnologySpec.params)
-│   ├── weather_series.py # read_hourly_series() / align_to_year() -- generic hourly
-│   │                     #   CSV read+validate+align (pandas), no dependency on the
-│   │                     #   weather package itself, only on its documented CSV shape
 │   └── data_loader.py    # importlib.resources JSON loader (used by config/ only)
 ├── calliope_export/
 │   ├── modern.py          # -> conversion, flow_* naming (current Calliope; the
@@ -60,8 +57,10 @@ src/conversion_technologies/
 │   ├── costs.csv             # every cost_* column, joined to technologies.csv by key
 │   ├── boiler/{generic,specific}
 │   ├── heat_pump/{generic,specific,weather_cop.py}  # weather_cop.py: opt-in real
-│   │                      #   (not fixed-design-point) hourly COP from a weather CSV,
-│   │                      #   see docs/calliope_schema_mapping.md "Weather-driven COP
+│   │                      #   (not fixed-design-point) hourly COP via weather's
+│   │                      #   get_point_weather(lat, lon, year) -- weather is a
+│   │                      #   compulsory dependency (pyproject.toml), see
+│   │                      #   docs/calliope_schema_mapping.md "Weather-driven COP
 │   │                      #   profiles" -- deliberately NOT wired into the registry
 │   └── combined_heat_and_power/{generic,specific}
 ├── existing/              # OUT OF SCOPE: fireplace.py, a bottom-up occupancy+weather

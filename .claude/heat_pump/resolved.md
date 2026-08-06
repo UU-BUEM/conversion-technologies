@@ -7,12 +7,10 @@
   models a heat pump in its own docs.
 - BY-DESIGN: `carnot_cop` is one function accepting either a scalar or an
   array-like source temperature (numpy elementwise), not two separate
-  functions. The `T` column of the weather module's
-  `CsvWeatherData.extract_weather_columns()` (2 m air temperature, deg C) is
-  the harmonised cross-provider output the array form is meant to consume --
-  it originates from COSMO-REA6's raw `T_2M`, ERA5-Land's `t2m` and
-  MERRA-2's `T2M`, each already converted from Kelvin to Celsius by the
-  weather module itself, so no unit conversion is needed on this side.
+  functions. `weather.get_point_weather()`'s `T` column (2 m air
+  temperature, deg C, already converted from Kelvin and harmonised across
+  COSMO-REA6/ERA5-Land/MERRA-2 by `weather` itself) is the array form's
+  real-world consumer -- see [weather-cop-entry-point] below.
 - [weather-integration-scope] BY-DESIGN: the catalog builder
   (`new/heat_pump/specific/__init__.py`'s `_build`) stays zero-argument
   (called via `functools.partial(_build, row)`, no external inputs beyond
@@ -29,9 +27,13 @@
   the registry builder arguments. It re-derives the design sink temperature
   and quality factor from `technologies.csv` for the requested id (same
   source `_build` reads, not retyped by the caller) rather than adding new
-  `TechnologySpec` fields for them. Reads its weather CSV directly (via
-  `core.weather_series`, `pandas`) rather than depending on the `weather`
-  package itself -- see root `.claude/resolved.md`
-  "weather-series-own-reader" for why. See open.md: this only ever applies
-  to the air-source (`electric`) variant in practice, since there is no
-  ground-temperature data source for `geothermal`.
+  `TechnologySpec` fields for them. Calls `weather.get_point_weather(lat,
+  lon, year, provider=...)` directly -- `weather` is a **compulsory**
+  runtime dependency of this package (`pyproject.toml`, `infrastructure/
+  env/conversion_env.yml`), matching how `UU-BUEM/buem` treats the same
+  dependency. SUPERSEDES an earlier version of this decision that read a
+  CSV via a since-deleted `core.weather_series` module with zero dependency
+  on `weather` itself, reversed once the `buem` precedent was found -- see
+  root `.claude/resolved.md` "weather-real-dependency". See open.md: this
+  only ever applies to the air-source (`electric`) variant in practice,
+  since there is no ground-temperature data source for `geothermal`.

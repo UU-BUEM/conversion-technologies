@@ -20,10 +20,11 @@ def carnot_cop(
 
     ``t_source_c`` may be a single design-point temperature (COP at a fixed
     design condition) or an array-like of temperatures -- e.g. an hourly
-    ``T`` series from the weather module's
-    ``CsvWeatherData.extract_weather_columns()`` (2 m air temperature, deg C:
-    the harmonised output of COSMO-REA6's raw ``T_2M``, ERA5-Land's ``t2m``
-    and MERRA-2's ``T2M``). The same formula applies elementwise either way.
+    ``T`` series from the ``weather`` package's ``get_point_weather()``
+    (2 m air temperature, deg C: the harmonised output of COSMO-REA6's raw
+    ``T_2M``, ERA5-Land's ``t2m`` and MERRA-2's ``T2M``), the real consumer
+    in ``new/heat_pump/weather_cop.py``. The same formula applies elementwise
+    either way.
 
     Parameters
     ----------

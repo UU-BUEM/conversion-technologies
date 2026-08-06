@@ -203,18 +203,19 @@ def _cmd_export_all(args: argparse.Namespace) -> int:
 
 def _cmd_weather_cop(args: argparse.Namespace) -> int:
     # Imported here, not at module level: this is the one CLI command that
-    # needs pandas (via new.heat_pump.weather_cop), which every other
-    # command has no reason to import.
+    # needs pandas/weather (via new.heat_pump.weather_cop), which every
+    # other command has no reason to import.
     from conversion_technologies.new.heat_pump.weather_cop import export_weather_cop
 
     output_dir = args.output or SETTINGS.output_dir
     paths = export_weather_cop(
         args.technology_id,
-        args.weather_csv,
         output_dir,
+        latitude=args.latitude,
+        longitude=args.longitude,
         year=args.year,
-        temperature_column=args.temperature_column,
-        max_missing_fraction=args.max_missing_fraction,
+        provider=args.provider,
+        data_dir=args.data_dir,
     )
     for path in paths.values():
         print(f"Wrote {path}")
@@ -330,8 +331,9 @@ def build_parser() -> argparse.ArgumentParser:
     weather_cop_parser = subparsers.add_parser(
         "weather-cop",
         help=(
-            "Compute a real hourly heat pump COP from a weather CSV and export "
-            "it as Calliope data_tables (see docs/calliope_schema_mapping.md "
+            "Compute a real hourly heat pump COP for a location/year via the "
+            "weather package's get_point_weather() and export it as Calliope "
+            "data_tables (see docs/calliope_schema_mapping.md "
             "'Weather-driven COP profiles')."
         ),
     )
@@ -340,39 +342,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="A registered heat_pump technology id, e.g. heat_pump_electric_household.",
     )
     weather_cop_parser.add_argument(
-        "--csv",
-        dest="weather_csv",
+        "--latitude",
         required=True,
-        help=(
-            "Weather CSV path -- the format weather.export."
-            "export_single_point_csv() produces (timestamp column + a "
-            "temperature column)."
-        ),
+        type=float,
+        help="Target location latitude (WGS84).",
+    )
+    weather_cop_parser.add_argument(
+        "--longitude",
+        required=True,
+        type=float,
+        help="Target location longitude (WGS84).",
     )
     weather_cop_parser.add_argument(
         "--year",
         required=True,
         type=int,
-        help="Modelling year to align the weather series to.",
+        help="Calendar year to fetch (must already be processed -- weather-cop does not download/process data itself).",
     )
     weather_cop_parser.add_argument(
-        "--temperature-column",
-        default="T",
+        "--provider",
+        default="era5-land",
         help=(
-            "Name of the 2 m outdoor-air temperature column in the weather "
-            "CSV (default: T, weather's own harmonised name across "
-            "providers -- raw per-provider exports use T_2M/t2m/T2M "
-            "instead). NOT ground/soil temperature -- weather has none."
+            "Weather provider to query (default: era5-land). One of "
+            "era5-land/cosmo-rea6/merra-2 (aliases era5/cosmo/merra2 also "
+            "accepted) -- see weather.get_point_weather. NOT ground/soil "
+            "temperature -- weather has none, only 2 m air temperature."
         ),
     )
     weather_cop_parser.add_argument(
-        "--max-missing-fraction",
-        type=float,
-        default=0.0,
+        "--data-dir",
+        default=None,
         help=(
-            "Fraction of the target year's hourly timestamps allowed to be "
-            "missing from the weather CSV after alignment (default: 0.0, i.e. "
-            "require complete coverage)."
+            "Directory containing the provider's already-processed .nc "
+            "files (default: weather's own per-provider output convention)."
         ),
     )
     weather_cop_parser.add_argument(

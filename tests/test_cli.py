@@ -241,19 +241,22 @@ def test_export_all_directory_mode_writes_one_shared_math_file(tmp_path: Path) -
     assert "heat_pump_geothermal_household" in text
 
 
-def test_weather_cop_command_writes_three_files(tmp_path: Path) -> None:
+def test_weather_cop_command_writes_three_files(tmp_path: Path, monkeypatch) -> None:
     index = pd.date_range("2018-01-01 00:00:00", "2018-12-31 23:00:00", freq="h")
-    weather_csv = tmp_path / "weather.csv"
-    pd.DataFrame({"T": [8.0] * len(index)}, index=index).rename_axis("datetime").to_csv(
-        weather_csv
+    weather_df = pd.DataFrame({"T": [8.0] * len(index)}, index=index)
+    monkeypatch.setattr(
+        "conversion_technologies.new.heat_pump.weather_cop.get_point_weather",
+        lambda *args, **kwargs: weather_df,
     )
     output_dir = tmp_path / "out"
     exit_code = main(
         [
             "weather-cop",
             "heat_pump_electric_household",
-            "--csv",
-            str(weather_csv),
+            "--latitude",
+            "52.09",
+            "--longitude",
+            "5.12",
             "--year",
             "2018",
             "-o",

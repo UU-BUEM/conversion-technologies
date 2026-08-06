@@ -59,7 +59,7 @@ def test_carnot_cop_rejects_out_of_range_efficiency() -> None:
 
 
 def test_carnot_cop_accepts_an_array_of_temperatures() -> None:
-    # e.g. a real hourly 'T' series from the weather module's CsvWeatherData.
+    # e.g. a real hourly 'T' series from weather.get_point_weather().
     t_series = np.array([2.0, 5.0, 10.0])
     cop = carnot_cop(t_series, t_sink_c=45.0, carnot_efficiency=0.45)
     assert cop.shape == (3,)

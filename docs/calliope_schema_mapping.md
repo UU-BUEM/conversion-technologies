@@ -186,35 +186,47 @@ outdoor-air temperature series instead, for whoever wants a time-varying
 catalog stays design-point-only by design (`.claude/heat_pump/resolved.md`
 "weather-integration-scope").
 
+The temperature series comes from the sibling
+[`weather`](https://github.com/UU-BUEM/weather) package's own
+`get_point_weather(latitude, longitude, year, provider="era5-land",
+data_dir=None)` — a real per-location fetch of an already-processed archive
+(it does not download/process data itself; raises `FileNotFoundError` if
+nothing's been processed yet for that `(provider, year)`). `weather` is a
+**compulsory** runtime dependency of this package (`pyproject.toml`,
+`infrastructure/env/conversion_env.yml`), matching how
+[`UU-BUEM/buem`](https://github.com/UU-BUEM/buem) treats the same
+dependency — no CSV/local-file fallback exists. Installed as
+`weather[pointquery]` (not `weather[pointquery,solar]` like `buem` — COP
+only needs `T`, no irradiance), which is the *lightweight* extra
+(`xarray`+`netcdf4`, opening an already-processed point) rather than
+`weather`'s much heavier `pipeline` extra (cfgrib/dask/eccodes/pyproj/scipy,
+needed only to *produce* archives from raw provider sources, not query
+them) — `dask` is still needed and conda-installed explicitly alongside it,
+since `weather`'s point-query path uses `xr.open_mfdataset` internally
+without declaring `dask` in its own `pointquery` extra (confirmed against
+`buem`'s own environment spec, which hits the same gap).
+
 Calliope allows *any* parameter to vary over the `timesteps` dimension,
 loaded via a top-level `data_tables:` block referencing a CSV (see
 [Calliope's Data tables docs](https://calliope.readthedocs.io/en/latest/basic/data_tables/)).
 `weather_cop.export_weather_cop()` (also exposed as the `weather-cop` CLI
-subcommand) does this end to end:
+subcommand, taking `--latitude`/`--longitude`/`--year`/`--provider`/
+`--data-dir`) does this end to end:
 
-1. `core.weather_series.read_hourly_series()` reads an hourly 2 m
-   outdoor-air temperature column (`--temperature-column`, default `"T"`)
-   from a CSV shaped like the sibling `weather` package's
-   `weather.export.export_single_point_csv()` output (this package has no
-   dependency on `weather` itself — see "Units, currency, and Calliope
-   version" below for why — only on that documented CSV shape). `"T"` is
-   `weather`'s own harmonised name for this variable across providers —
-   COSMO-REA6's raw `T_2M`, ERA5-Land's `t2m`, MERRA-2's `T2M`, each already
-   converted from Kelvin to °C by `weather` itself before it reaches this
-   CSV. **Not** ground/soil temperature — `weather` has none, see the
-   geothermal note below. If you're pointing `weather-cop` at a CSV that
-   hasn't gone through `weather`'s own harmonisation (e.g. a raw per-provider
-   export), pass `--temperature-column T_2M`/`t2m`/`T2M` to match instead.
-2. `core.weather_series.align_to_year()` reindexes it onto every expected
-   hourly timestamp for the target year (8760 or 8784 rows, computed from
-   the year — never assumed).
-3. `carnot_cop()` (`new/heat_pump/generic/cop_calculation.py` — already
+1. `weather.get_point_weather(latitude, longitude, year, provider=...,
+   data_dir=...)` returns an hourly, tz-naive `T`/`GHI`/`DHI`/`DNI`
+   DataFrame; only `T` (2 m air temperature, °C) is used. **Not**
+   ground/soil temperature — `weather` has none, see the geothermal note
+   below.
+2. `carnot_cop()` (`new/heat_pump/generic/cop_calculation.py` — already
    array-capable, unchanged) is applied elementwise using the same design
    sink temperature and quality factor `technologies.csv` already has for
    that technology (re-read from the CSV, not retyped by the caller), then
    checked against the same `[1, 20]` sanity bound the design-point COP is
-   checked against — per-hour now, not once.
-4. Two CSVs (`<id>_flow_out_eff.csv` = COP, `<id>_flow_in_eff.csv` = COP − 1)
+   checked against — per-hour now, not once, and any NaN hour (source
+   temperature met/exceeded the sink temperature) raises rather than being
+   written silently into a Calliope data table.
+3. Two CSVs (`<id>_flow_out_eff.csv` = COP, `<id>_flow_in_eff.csv` = COP − 1)
    and a `data_tables:` YAML block referencing them are written.
 
 ```yaml
@@ -262,7 +274,7 @@ once rather than left implicit:
 | Currency | USD | every `cost_*` column/parameter |
 | Power / capacity | kW | `flow_cap_max` and everything scaled against it |
 | Energy | kWh | `cost_flow_in`/`cost_flow_out`, any `data_tables` timeseries value |
-| Timestep | 1 hour | matches `weather`'s and `occupancy`'s native resolution exactly — `weather_series.read_hourly_series()` enforces this on input rather than assuming it |
+| Timestep | 1 hour | matches `weather`'s and `occupancy`'s native resolution exactly — `weather.get_point_weather()`'s own contract returns an hourly series, trusted rather than re-validated here (`weather-cop` is the one place a real timeseries enters this package) |
 
 **Calliope version**: this package's `flow_*`/`conversion` schema targets
 Calliope **0.7**, which is still pre-release. `pip install calliope` with no

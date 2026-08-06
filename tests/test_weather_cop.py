@@ -55,8 +55,8 @@ def test_build_cop_data_tables_shape() -> None:
     assert "nodes" not in out_entry["add_dims"]  # this package has no node concept
 
 
-def test_export_weather_cop_end_to_end(tmp_path: Path) -> None:
-    index = pd.date_range("2018-01-01 00:00:00", "2018-12-31 23:00:00", freq="h")
+def _synthetic_weather_df(year: int = 2018) -> pd.DataFrame:
+    index = pd.date_range(f"{year}-01-01 00:00:00", f"{year}-12-31 23:00:00", freq="h")
     rng = np.random.default_rng(0)
     # heat_pump_electric_household's design sink is 45C -- stay well under it
     # everywhere so every hour yields a finite, in-range COP.
@@ -65,13 +65,32 @@ def test_export_weather_cop_end_to_end(tmp_path: Path) -> None:
         + 5.0 * np.sin(np.linspace(0, 2 * np.pi, len(index)))
         + rng.normal(0, 0.1, len(index))
     )
-    weather_csv = tmp_path / "weather.csv"
-    pd.DataFrame({"T": temps}, index=index).rename_axis("datetime").to_csv(weather_csv)
+    return pd.DataFrame({"T": temps, "GHI": 0.0, "DHI": 0.0, "DNI": 0.0}, index=index)
+
+
+def test_export_weather_cop_end_to_end(tmp_path: Path, monkeypatch) -> None:
+    calls = {}
+
+    def fake_get_point_weather(
+        latitude, longitude, year, *, provider="era5-land", data_dir=None
+    ):
+        calls["args"] = (latitude, longitude, year, provider, data_dir)
+        return _synthetic_weather_df(year)
+
+    monkeypatch.setattr(
+        "conversion_technologies.new.heat_pump.weather_cop.get_point_weather",
+        fake_get_point_weather,
+    )
 
     output_dir = tmp_path / "out"
     paths = export_weather_cop(
-        "heat_pump_electric_household", weather_csv, output_dir, year=2018
+        "heat_pump_electric_household",
+        output_dir,
+        latitude=52.09,
+        longitude=5.12,
+        year=2018,
     )
+    assert calls["args"] == (52.09, 5.12, 2018, "era5-land", None)
     assert paths["flow_out_eff_csv"].exists()
     assert paths["flow_in_eff_csv"].exists()
     assert paths["data_tables_yaml"].exists()
@@ -84,13 +103,18 @@ def test_export_weather_cop_end_to_end(tmp_path: Path) -> None:
     assert flow_in.iloc[0] == pytest.approx(cop.iloc[0] - 1.0)
 
 
-def test_export_weather_cop_rejects_a_non_heat_pump_id(tmp_path: Path) -> None:
-    index = pd.date_range("2018-01-01 00:00:00", "2018-12-31 23:00:00", freq="h")
-    weather_csv = tmp_path / "weather.csv"
-    pd.DataFrame({"T": [5.0] * len(index)}, index=index).rename_axis("datetime").to_csv(
-        weather_csv
+def test_export_weather_cop_rejects_a_non_heat_pump_id(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "conversion_technologies.new.heat_pump.weather_cop.get_point_weather",
+        lambda *args, **kwargs: _synthetic_weather_df(),
     )
     with pytest.raises(ValueError, match="input carrier"):
         export_weather_cop(
-            "boiler_gas_household", weather_csv, tmp_path / "out", year=2018
+            "boiler_gas_household",
+            tmp_path / "out",
+            latitude=52.09,
+            longitude=5.12,
+            year=2018,
         )

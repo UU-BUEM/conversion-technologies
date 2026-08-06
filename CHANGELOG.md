@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: `weather-cop` now fetches weather data directly from the
+  `weather` package instead of reading a pre-exported CSV.** `v0.3.0`'s
+  `weather-cop --csv PATH --year YYYY [--temperature-column T]
+  [--max-missing-fraction 0.0]` becomes `weather-cop --latitude LAT
+  --longitude LON --year YYYY [--provider era5-land] [--data-dir PATH]`,
+  calling `weather.get_point_weather()` (a real per-location fetch of an
+  already-processed archive) directly. `weather` is now a **compulsory**
+  runtime dependency (`pyproject.toml`, `infrastructure/env/
+  conversion_env.yml`), matching how `UU-BUEM/buem` treats the same
+  dependency -- `core/weather_series.py` (the CSV-reading module `v0.3.0`
+  added) and its tests are removed entirely, no CSV path remains. See
+  `docs/calliope_schema_mapping.md` "Weather-driven COP profiles".
+
 ## [0.3.0] - 2026-07-28
 
 ### Fixed

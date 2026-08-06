@@ -173,20 +173,49 @@
   `docs/calliope_schema_mapping.md` "Carrier ratio math". Not validated
   against a running Calliope solve (none available here) -- stated
   explicitly wherever this is documented, not silently assumed correct.
-- [weather-series-own-reader] BY-DESIGN: `core/weather_series.py` (a new
-  `pandas` dependency) reads the weather CSV contract `weather.export.
-  export_single_point_csv()` already documents itself, rather than
-  depending on the `weather` package. Reason: `weather` pulls in netCDF4,
-  xarray, cfgrib, eccodes, dask, pyproj, scipy -- a large, geospatial
-  dependency footprint disproportionate to what's needed here (one
-  timestamp-indexed temperature column). This *is* the "internal data
-  transfer, not an API" answer to an explicit user question -- both
-  packages are local, same-org, same-machine; `weather` already produces a
-  file shaped for exactly this, so no network/API layer was considered.
-  `existing/fireplace.py`'s `TYPE_CHECKING`-only import of
-  `buem_weather`/`buem_occupancy` (a stale package name --
-  `weather`'s own actual package/import name is `weather`) was
-  deliberately *not* copied as a pattern for this reason too.
+- [weather-series-own-reader] SUPERSEDED (2026-07-28): originally
+  `core/weather_series.py` (a new `pandas` dependency) read the weather CSV
+  contract `weather.export.export_single_point_csv()` documents, with zero
+  dependency on the `weather` package itself -- reasoning at the time:
+  `weather` pulls in netCDF4/xarray/cfgrib/eccodes/dask/pyproj/scipy, a
+  footprint disproportionate to one temperature column, and both packages
+  being local/same-org/same-machine meant no network/API layer was needed
+  either way. Reversed once the user pointed at a real, working precedent
+  in `UU-BUEM/buem` that integrates with `weather` far more tightly than
+  this reasoning assumed was warranted -- see [weather-real-dependency]
+  below for what replaced it. The "no network/API layer, local data
+  transfer" half of the original reasoning was never in question and still
+  holds; only the "avoid the `weather` package itself" half was wrong.
+- [weather-real-dependency] BY-DESIGN: `weather` is now a **compulsory**
+  runtime dependency (`pyproject.toml`, `infrastructure/env/
+  conversion_env.yml`), installed as `weather[pointquery] @
+  git+https://github.com/UU-BUEM/weather.git@main` -- matches exactly how
+  `UU-BUEM/buem` treats this same dependency (confirmed by reading
+  `buem`'s `pyproject.toml`/`infrastructure/env/buem_env.yml` directly, not
+  guessed), as opposed to how `buem` treats `occupancy` (an optional extra
+  with a guarded import + synthetic fallback) -- the user explicitly chose
+  the "compulsory, like buem" option even though only the narrow
+  `weather-cop` command needs it, over a leaner optional-extra split.
+  `new/heat_pump/weather_cop.py` calls `weather.get_point_weather(lat, lon,
+  year, provider=..., data_dir=...)` directly (module-level import, not
+  lazy/guarded -- matches `buem`'s `weather_cache.py:30`), replacing
+  `core/weather_series.py`'s CSV path entirely (deleted, along with its
+  test) rather than keeping both -- also an explicit user choice. `weather`
+  now uses a `pointquery`/`pipeline` extras split (`pointquery` = just
+  `xarray`+`netcdf4`, lightweight; `pipeline` = the heavy
+  cfgrib/dask/eccodes/pyproj/scipy stack, only needed to *produce* archives,
+  not query them) -- this package installs `weather[pointquery]` only (not
+  `[pointquery,solar]` like `buem` -- no irradiance/pvlib need for COP).
+  `infrastructure/env/conversion_env.yml` additionally conda-installs
+  `dask` explicitly alongside `xarray`/`netcdf4`, even though `weather`'s
+  own `pointquery` extra doesn't declare it -- `weather`'s point-query path
+  uses `xr.open_mfdataset` internally and needs it at runtime regardless;
+  confirmed by finding the same gap called out in `buem_env.yml`'s own
+  comments, not discovered independently. `get_point_weather()`'s own
+  contract (hourly, complete, tz-naive `T`/`GHI`/`DHI`/`DNI` for one
+  location/year) is trusted rather than re-validated on this package's
+  side, matching how `buem` uses it -- no reindex/coverage-check layer was
+  rebuilt after deleting `core/weather_series.py`'s `align_to_year`.
 - [occupancy-out-of-scope] BY-DESIGN: `occupancy`'s `total_power_kwh` is not
   wired into anything here, and this package does not export a Calliope
   `demand` technology for it -- stays conversion-technologies only, per

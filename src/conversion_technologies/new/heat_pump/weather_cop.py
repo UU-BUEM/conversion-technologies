@@ -7,10 +7,16 @@ zero-argument registry builders -- see ``.claude/heat_pump/resolved.md``
 non-catalog entry point". The catalog's design-point COP is unchanged; this
 module produces a second, opt-in artifact (two ``data_tables`` CSVs + the
 YAML block referencing them) for one specific technology, from a real
-2 m outdoor-air temperature series (``weather``'s harmonised ``T`` column --
-COSMO-REA6's raw ``T_2M``, ERA5-Land's ``t2m``, MERRA-2's ``T2M`` -- **not**
-ground/soil temperature, which ``weather`` doesn't produce), for whoever
-wants an hourly-varying COP instead of the design-point value. See
+2 m outdoor-air temperature series, for whoever wants an hourly-varying COP
+instead of the design-point value.
+
+Gets that temperature series from the sibling ``weather`` package's own
+``get_point_weather(latitude, longitude, year)`` -- a real per-location
+fetch of an already-processed archive, **not** ground/soil temperature
+(``weather`` doesn't produce that). ``weather`` is a compulsory dependency
+of this package (see ``pyproject.toml``/``infrastructure/env/
+conversion_env.yml``), matching how ``UU-BUEM/buem`` treats the same
+dependency -- there is deliberately no CSV/local-file fallback. See
 ``docs/calliope_schema_mapping.md`` "Weather-driven COP profiles".
 """
 
@@ -21,15 +27,12 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from weather import get_point_weather
 
 from conversion_technologies.calliope_export.writer import write_yaml_document
 from conversion_technologies.core.csv_loader import load_technology_rows
 from conversion_technologies.core.registry import get_technology
 from conversion_technologies.core.validation import require_no_nan, require_range_array
-from conversion_technologies.core.weather_series import (
-    align_to_year,
-    read_hourly_series,
-)
 from conversion_technologies.new.heat_pump.generic.cop_calculation import carnot_cop
 
 
@@ -40,7 +43,7 @@ def compute_hourly_cop(
     quality_factor: float,
     tech_id: str,
 ) -> pd.Series:
-    """Hourly COP from an hourly outdoor-temperature series.
+    """Hourly COP from an hourly 2 m outdoor-air temperature series.
 
     Same ``carnot_cop`` formula and the same ``[1, 20]`` sanity bound the
     registry's design-point COP is checked against
@@ -51,17 +54,12 @@ def compute_hourly_cop(
     possible condition, not a bug, but silently writing NaN into a Calliope
     data table is worse than failing loudly) or outside ``[1, 20]``.
     """
-    # carnot_cop()'s return type is float | NDArray -- always an array here
-    # since t_source_c is array-like, but np.asarray makes that concrete for
-    # both mypy and require_no_nan/require_range_array's array-only signatures.
-    cop = np.asarray(
-        carnot_cop(
-            t_source_c=temperature_c.to_numpy(dtype=np.float64),
-            t_sink_c=sink_temp_c,
-            carnot_efficiency=quality_factor,
-        ),
-        dtype=np.float64,
+    cop = carnot_cop(
+        t_source_c=temperature_c.to_numpy(dtype=np.float64),
+        t_sink_c=sink_temp_c,
+        carnot_efficiency=quality_factor,
     )
+    assert isinstance(cop, np.ndarray)  # array in (an hourly series), array out
     labels = list(temperature_c.index)
     require_no_nan(cop, name="hourly COP", tech_id=tech_id, labels=labels)
     require_range_array(cop, 1, 20, name="hourly COP", tech_id=tech_id, labels=labels)
@@ -139,27 +137,30 @@ def build_cop_data_tables(
 
 def export_weather_cop(
     technology_id: str,
-    weather_csv: str | Path,
     output_dir: str | Path,
     *,
+    latitude: float,
+    longitude: float,
     year: int,
-    temperature_column: str = "T",
-    max_missing_fraction: float = 0.0,
+    provider: str = "era5-land",
+    data_dir: str | Path | None = None,
 ) -> dict[str, Path]:
-    """End to end: a registered heat pump id + a weather CSV -> written files.
+    """End to end: a registered heat pump id + a location -> written files.
 
-    Reads and validates ``weather_csv`` (:func:`core.weather_series.
-    read_hourly_series`), aligns it to ``year``
-    (:func:`core.weather_series.align_to_year`), computes the hourly COP
-    (:func:`compute_hourly_cop`) using the design sink temperature and
-    quality factor already in ``technologies.csv`` for ``technology_id``,
-    and writes three files into ``output_dir``:
+    Fetches the 2 m outdoor-air temperature series for ``(latitude,
+    longitude, year)`` via ``weather.get_point_weather`` (extracts the
+    nearest already-processed grid cell for ``provider`` -- raises
+    ``FileNotFoundError`` if nothing has been processed yet for that
+    ``(provider, year)``; it does not download or process data itself),
+    computes the hourly COP (:func:`compute_hourly_cop`) using the design
+    sink temperature and quality factor already in ``technologies.csv`` for
+    ``technology_id``, and writes three files into ``output_dir``:
     ``<id>_flow_out_eff.csv``, ``<id>_flow_in_eff.csv``,
     ``<id>_data_tables.yaml``. Returns their paths, keyed
     ``"flow_out_eff_csv"``/``"flow_in_eff_csv"``/``"data_tables_yaml"``.
 
     Raises ``ValueError`` if ``technology_id`` isn't registered or isn't
-    heat-pump-shaped (exactly 2 input carriers: electricity + one free heat
+    heat-pump-shaped (exactly 2 input carriers: electricity + a free heat
     source) -- e.g. called against a boiler or CHP id.
     """
     tech = get_technology(technology_id)
@@ -172,10 +173,10 @@ def export_weather_cop(
     ambient_carrier = next(c for c in tech.carriers_in if c != tech.primary_carrier_in)
     row = _design_row(technology_id)
 
-    temperature_c = read_hourly_series(weather_csv, column=temperature_column)
-    temperature_c = align_to_year(
-        temperature_c, year, max_missing_fraction=max_missing_fraction
+    weather_df = get_point_weather(
+        latitude, longitude, year, provider=provider, data_dir=data_dir
     )
+    temperature_c = weather_df["T"]
 
     cop = compute_hourly_cop(
         temperature_c,
