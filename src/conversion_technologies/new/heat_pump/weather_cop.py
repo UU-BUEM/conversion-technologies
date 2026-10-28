@@ -104,10 +104,13 @@ def build_cop_data_tables(
     Deliberately omits ``nodes`` from ``add_dims`` -- this package has no
     concept of a Calliope node/location (it only ever emits ``techs:``
     bodies); the consuming model must add its own node mapping, called out
-    in the returned block's ``_comment``.
+    in the returned block's ``comment``.
     """
     return {
-        "_comment": (
+        # No leading underscore -- Calliope 0.7.0's real schema rejects
+        # any key matching that shape (confirmed against an installed
+        # calliope==0.7.0, see conversion_technologies.calliope_export.modern).
+        "comment": (
             "Add a 'nodes' entry to each add_dims block below matching "
             "wherever this technology is actually placed in your model -- "
             "this package has no concept of a Calliope node."

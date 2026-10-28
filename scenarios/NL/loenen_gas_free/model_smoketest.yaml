@@ -1,0 +1,21 @@
+# Phase 4 smoke test -- 3-node subset of model.yaml, to validate structure
+# before attempting the full 1,260-node build. NOT the real scenario model.
+config:
+  init:
+    name: Loenen gas-free smoketest
+    calliope_version: 0.7.0
+    subset:
+      timesteps: ["2018-01-01", "2018-01-07"]
+    math_paths:
+      additional_math: "technologies/export/loenen_gas_free_techs.additional_math.yaml"
+    extra_math: ["additional_math"]
+    mode: base
+  build: {}
+  solve:
+    solver: cbc
+
+import:
+  - technologies/export/loenen_gas_free_techs.yaml
+  - nodes/demand_techs.yaml
+  - nodes/nodes_smoketest.yaml
+  - nodes/data_tables_smoketest.yaml

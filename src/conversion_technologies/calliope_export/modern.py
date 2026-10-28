@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from conversion_technologies.calliope_export.ratio_math import carrier_flow_ratios
 from conversion_technologies.core.technology import TechnologySpec
 
 schema_name = "modern"
@@ -67,6 +68,11 @@ def export(tech: TechnologySpec) -> dict[str, Any]:
     body["carrier_out"] = _carrier_field(tech.carriers_out)
     body["flow_in_eff"] = _efficiency_field(tech.carriers_in)
     body["flow_out_eff"] = _efficiency_field(tech.carriers_out)
+    # carrier_flow_ratio_in/out's value lives here, on the tech itself --
+    # see ratio_math.carrier_flow_ratios()'s docstring for why it cannot
+    # live inside additional_math.yaml's parameters block under real
+    # Calliope 0.7.0.
+    body.update(carrier_flow_ratios(tech))
 
     body["flow_cap_max"] = tech.flow_cap_max
     body["lifetime"] = tech.lifetime
@@ -79,6 +85,11 @@ def export(tech: TechnologySpec) -> dict[str, Any]:
     if len(tech.carriers_in) > 1 or len(tech.carriers_out) > 1:
         comment_parts.append(_MULTI_CARRIER_NOTE)
     if comment_parts:
-        body["_comment"] = " ".join(comment_parts)
+        # Calliope 0.7.0's real schema rejects any tech key starting with
+        # an underscore (`^[^_^\d][\w]*$`) -- confirmed by validating a
+        # real export against an installed calliope==0.7.0, not assumed.
+        # `comment` (no leading underscore) is accepted as an arbitrary
+        # extra tech parameter.
+        body["comment"] = " ".join(comment_parts)
 
     return body

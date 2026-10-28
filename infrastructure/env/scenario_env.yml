@@ -1,0 +1,47 @@
+# Conda environment spec for the scenario-analysis module
+# (scenarios/<country>/<scenario>/), NOT for the conversion_technologies
+# package itself -- see infrastructure/env/conversion_env.yml for that.
+#
+# Why a separate spec: conversion_technologies only ever writes YAML text
+# (confirmed: zero `import calliope` anywhere in src/, see
+# docs/calliope_schema_mapping.md "Units, currency, and Calliope version").
+# Scenario analysis (building per-node models, solving them, parallel
+# per-building batches -- scenarios/*/*/scripts/) genuinely needs a real
+# Calliope install plus its own solving stack. Keeping that out of
+# conversion_env.yml keeps the technology-definitions module installable
+# (and testable) without ever needing a Calliope install, and keeps this
+# module's own dependency set honest about what it actually needs.
+#
+# This also marks the real packaging boundary between the two
+# separately-owned areas of this repo (see CLAUDE.md "Module boundary:
+# technology definitions vs. scenario analysis") -- if scenario analysis
+# is ever split into its own repository, this file (plus scenarios/) is
+# what moves; conversion_env.yml and src/ stay behind untouched.
+#
+# Create:  conda env create -f infrastructure/env/scenario_env.yml
+# Update:  conda env update -f infrastructure/env/scenario_env.yml --prune
+#
+# calliope's own version is deliberately NOT pinned here -- which version
+# a given scenario run needs depends on the target system that will
+# actually execute it (see scenarios/NL/loenen_gas_free/docs/
+# phase4b_solve_0610_sizing.md for why this matters: Calliope 0.6.10 and
+# 0.7.0 have different schemas and different backend-construction
+# behavior). Pin an exact version in the scenario's own docs/run script
+# when you know which one you need, same as phase4_solve.md's
+# `.venv_calliope_check/` already does, but do it there -- not here.
+name: scenario_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy
+  - pyarrow
+  - psutil
+  - coincbc # CBC solver binary -- works against both calliope 0.6.10 and 0.7.0
+  - pip
+  - pip:
+      - ruamel.yaml>=0.18,<1 # same comment-preserving YAML writer conversion_env.yml uses
+      - calliope # pin an exact version (==0.6.10 or ==0.7.0) per the scenario you're running, see note above
+      - highspy # faster solver than CBC where a compatible pyomo/calliope pairing is confirmed -- see phase4b_solve_0610_sizing.md Finding 5 and the "0.7.0 + HiGHS" caveat in this scenario's docs

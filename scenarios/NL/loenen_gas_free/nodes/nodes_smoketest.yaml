@@ -1,0 +1,40 @@
+nodes:
+  bldg_8:
+    techs:
+      demand_heat: {}
+      demand_elec: {}
+      boiler_electric_household: {}
+      boiler_biomass_household: {}
+      heat_pump_electric_household: {}
+      heat_pump_geothermal_household: {}
+      chp_biomass_household: {}
+      supply_grid_electricity: {}
+      supply_biomass: {}
+      supply_ambient_heat: {}
+      supply_ground_heat: {}
+  bldg_10:
+    techs:
+      demand_heat: {}
+      demand_elec: {}
+      boiler_electric_household: {}
+      boiler_biomass_household: {}
+      heat_pump_electric_household: {}
+      heat_pump_geothermal_household: {}
+      chp_biomass_household: {}
+      supply_grid_electricity: {}
+      supply_biomass: {}
+      supply_ambient_heat: {}
+      supply_ground_heat: {}
+  bldg_12:
+    techs:
+      demand_heat: {}
+      demand_elec: {}
+      boiler_electric_household: {}
+      boiler_biomass_household: {}
+      heat_pump_electric_household: {}
+      heat_pump_geothermal_household: {}
+      chp_biomass_household: {}
+      supply_grid_electricity: {}
+      supply_biomass: {}
+      supply_ambient_heat: {}
+      supply_ground_heat: {}

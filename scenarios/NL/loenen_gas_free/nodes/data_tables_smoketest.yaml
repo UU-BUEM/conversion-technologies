@@ -1,0 +1,15 @@
+data_tables:
+  loenen_demand_heat:
+    table: nodes/demand_heat_smoketest.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_heat
+      inputs: sink_use_equals
+  loenen_demand_elec:
+    table: nodes/demand_elec_smoketest.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_elec
+      inputs: sink_use_equals

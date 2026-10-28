@@ -136,12 +136,12 @@ constraints:
   link_flow_in_carriers:
     where: carrier_flow_ratio_in
     equations:
-      - where: techs=heat_pump_electric_household
+      - where: "[heat_pump_electric_household] in techs"
         expression: flow_in[carriers=ambient_heat] == flow_in[carriers=electricity] * carrier_flow_ratio_in
   balance_conversion:  # overrides the base equation, scoped per affected tech
     where: base_tech==conversion AND NOT include_storage==true
     equations:
-      - where: techs=heat_pump_electric_household
+      - where: "[heat_pump_electric_household] in techs"
         expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
 ```
 
@@ -153,6 +153,26 @@ official CHP example
 `heat_to_power_ratio` + a `link_chp_outputs` equality constraint + the same
 kind of scoped `balance_conversion` override), generalised to work for the
 input side too (heat pump) instead of only the output side (CHP).
+
+**Where each tech's actual ratio *value* lives — confirmed against a real
+`calliope==0.7.0` install (2026-10-23), not just cross-checked against the
+docs like the rest of this section originally was**: `additional_math.yaml`'s
+`parameters:` block only ever *declares* `carrier_flow_ratio_in`/`_out`
+(`default`/`title`/`description` metadata) — Calliope 0.7.0's real
+math-file `Parameters` schema rejects an indexed `data`/`index`/`dims`
+block there (`extra_forbidden`). The actual per-tech scalar value is set
+directly on that tech's own body in the *model definition* instead
+(`ratio_math.carrier_flow_ratios(tech)`, called from `modern.export()` and
+merged into the tech body — e.g. `heat_pump_electric_household:
+{..., carrier_flow_ratio_in: 2.33, ...}`), where Calliope does accept an
+arbitrary extra scalar tech attribute. The `where:` clauses above also use
+Calliope's real tech-matching syntax, `"[tech_id] in techs"` — an earlier
+version of this section (and of `ratio_math.py` itself) used `techs=tech_id`,
+which fails real math-string parsing. Both caught and fixed by validating
+a real `export-all` output end-to-end (model load + `m.build()`) against
+an installed Calliope, not by further reading Calliope's own docs — see
+`scenarios/NL/loenen_gas_free/docs/phase4_solve.md` for the full trace of
+each failure and fix.
 
 `export`/`export-all` write this alongside the techs YAML automatically as
 `additional_math.yaml` (or `<stem>.additional_math.yaml` next to a combined/
@@ -167,12 +187,19 @@ technology in this package needs that; if one ever does, it requires
 different hand-written "user-defined math" than the above. See
 `.claude/open.md`.
 
-**Caveat, stated plainly**: this was derived algebraically from Calliope's
-published base math and cross-checked against its own official example —
-not verified against a running Calliope solve (none is available in this
-environment). Spot-check both the tech YAML and the accompanying
-`additional_math.yaml` against whatever Calliope version is actually pinned
-in the consuming model repo before relying on it for real analysis.
+**Verified against a real Calliope install (2026-10-23)**, not just
+algebraically: a real `export-all` output (15 non-gas technologies,
+Loenen gas-free scenario) both loads (`calliope.read_yaml`) and builds
+(`m.build()`) successfully against an installed `calliope==0.7.0` — see
+"Where each tech's actual ratio *value* lives" above and
+`scenarios/NL/loenen_gas_free/docs/phase4_solve.md` for the two real bugs
+that verification caught and fixed. **Still not verified**: an actual
+numeric *solve* (`m.solve()`) — blocked in that same pass by an unrelated
+Pyomo/HiGHS solver-backend compatibility bug in the validation
+environment, not by anything in this package's generated YAML. Spot-check
+both the tech YAML and the accompanying `additional_math.yaml` against
+whatever Calliope version is actually pinned in the consuming model repo
+before relying on it for a real solve.
 
 ## Weather-driven COP profiles (`new/heat_pump/weather_cop.py`)
 
@@ -277,12 +304,15 @@ once rather than left implicit:
 | Timestep | 1 hour | matches `weather`'s and `occupancy`'s native resolution exactly — `weather.get_point_weather()`'s own contract returns an hourly series, trusted rather than re-validated here (`weather-cop` is the one place a real timeseries enters this package) |
 
 **Calliope version**: this package's `flow_*`/`conversion` schema targets
-Calliope **0.7**, which is still pre-release. `pip install calliope` with no
-version pin resolves to old, incompatible `0.6.10`
-(`conversion_plus`/`carrier_ratios` schema) — pin an exact `0.7.0.devN`
-(`0.7.0.dev7` was the latest on PyPI as of this writing; GitHub `main` was
-ahead at `0.7.0.dev8`, unreleased) or install from `main` in the *consuming*
-model repo. This package itself takes no `calliope` runtime dependency — it
+Calliope **0.7**, which **shipped as a full stable release** on PyPI as of
+2026-10-23 (`pip install calliope==0.7.0` — confirmed working, see
+`scenarios/NL/loenen_gas_free/docs/phase4_solve.md`). This updates earlier
+guidance here that named `0.7.0.dev8`/`dev7` as the latest available —
+that was true when first written but is now stale; `pip install calliope`
+with no version pin still resolves to old, incompatible `0.6.10`
+(`conversion_plus`/`carrier_ratios` schema), so an exact pin (`==0.7.0`) is
+still needed in the *consuming* model repo, just not a dev pre-release
+anymore. This package itself takes no `calliope` runtime dependency — it
 only ever writes YAML text — so nothing here pins a version; this is
 guidance for whoever builds the model that imports this package's output.
 

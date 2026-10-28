@@ -1,0 +1,21 @@
+{
+  "technology_ids": [
+    "boiler_electric_household",
+    "boiler_electric_building",
+    "boiler_electric_community",
+    "boiler_biomass_household",
+    "boiler_biomass_building",
+    "boiler_biomass_community",
+    "heat_pump_electric_household",
+    "heat_pump_electric_building",
+    "heat_pump_electric_community",
+    "heat_pump_geothermal_household",
+    "heat_pump_geothermal_building",
+    "heat_pump_geothermal_community",
+    "chp_biomass_household",
+    "chp_biomass_building",
+    "chp_biomass_community"
+  ],
+  "schema": "modern",
+  "output_dir": "scenarios/NL/loenen_gas_free/technologies/export"
+}

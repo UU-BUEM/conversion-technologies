@@ -1,0 +1,49 @@
+techs:
+  demand_heat:
+    base_tech: demand
+    name: Heat demand (space heating + DHW)
+    carrier_in: heat
+    comment: sink_use_equals = buem's Q_heat_kW + dhw_kW, per building (scenarios/NL/loenen_gas_free/docs/phase1_demand.md). Not verified against a running Calliope solve -- see this repo's docs/calliope_schema_mapping.md caveat on additional_math, which applies here too.
+  demand_elec:
+    base_tech: demand
+    name: Electricity demand (appliances; cooking already included)
+    carrier_in: electricity
+    comment: "sink_use_equals = buem's elec_kW (occupancy's elecLoad). No Loenen building in this population cooks with gas (verified: cooking_gas_kW sums to 0 for all 1,260 buildings), so no separate cooking carrier is modeled."
+  supply_grid_electricity:
+    base_tech: supply
+    name: Grid electricity import
+    carrier_out: electricity
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.25
+      index: monetary
+      dims: costs
+    comment: Placeholder grid tariff (USD/kWh, this package's currency convention) -- not a real Dutch electricity price.
+  supply_biomass:
+    base_tech: supply
+    name: Biomass (wood pellet) fuel supply
+    carrier_out: biomass
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.05
+      index: monetary
+      dims: costs
+    comment: Placeholder pellet price (USD/kWh) -- not sourced from a real market quote.
+  supply_ambient_heat:
+    base_tech: supply
+    name: Free ambient (outdoor-air) heat source
+    carrier_out: ambient_heat
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.0
+      index: monetary
+      dims: costs
+  supply_ground_heat:
+    base_tech: supply
+    name: Free ground heat source
+    carrier_out: ground_heat
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.0
+      index: monetary
+      dims: costs

@@ -1,0 +1,439 @@
+techs:
+  boiler_biomass_building:
+    base_tech: conversion
+    name: Biomass (wood pellet) boiler (building)
+    color: '#7A5230'
+    carrier_in: biomass
+    carrier_out: heat
+    flow_in_eff: 1.0
+    flow_out_eff: 0.87
+    flow_cap_max: 100.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 350.0
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.035
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Nameplate efficiency 87%.
+  boiler_biomass_community:
+    base_tech: conversion
+    name: Biomass (wood pellet) boiler (community)
+    color: '#7A5230'
+    carrier_in: biomass
+    carrier_out: heat
+    flow_in_eff: 1.0
+    flow_out_eff: 0.88
+    flow_cap_max: 2000.0
+    lifetime: 22
+    cost_flow_cap:
+      data: 300.0
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.035
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Nameplate efficiency 88%.
+  boiler_biomass_household:
+    base_tech: conversion
+    name: Biomass (wood pellet) boiler (household)
+    color: '#7A5230'
+    carrier_in: biomass
+    carrier_out: heat
+    flow_in_eff: 1.0
+    flow_out_eff: 0.85
+    flow_cap_max: 15.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 400.0
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.035
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Nameplate efficiency 85%.
+  boiler_electric_building:
+    base_tech: conversion
+    name: Electric resistance boiler (building)
+    color: '#F2C14E'
+    carrier_in: electricity
+    carrier_out: heat
+    flow_in_eff: 1.0
+    flow_out_eff: 0.99
+    flow_cap_max: 60.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 120.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Nameplate efficiency 99%.
+  boiler_electric_community:
+    base_tech: conversion
+    name: Electric resistance boiler (community)
+    color: '#F2C14E'
+    carrier_in: electricity
+    carrier_out: heat
+    flow_in_eff: 1.0
+    flow_out_eff: 0.99
+    flow_cap_max: 500.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 100.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Nameplate efficiency 99%.
+  boiler_electric_household:
+    base_tech: conversion
+    name: Electric resistance boiler (household)
+    color: '#F2C14E'
+    carrier_in: electricity
+    carrier_out: heat
+    flow_in_eff: 1.0
+    flow_out_eff: 0.99
+    flow_cap_max: 12.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 150.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Nameplate efficiency 99%.
+  chp_biomass_building:
+    base_tech: conversion
+    name: Biomass combined heat and power (building)
+    color: '#5B7A3A'
+    carrier_in: biomass
+    carrier_out:
+      - electricity
+      - heat
+    flow_in_eff: 1.0
+    flow_out_eff:
+      data:
+        - 0.2286
+        - 0.5714
+      index:
+        - electricity
+        - heat
+      dims: carriers
+    carrier_flow_ratio_out: 2.499562554680665
+    flow_cap_max: 80.0
+    lifetime: 18
+    cost_flow_cap:
+      data: 3000.0
+      index: monetary
+      dims: costs
+    flow_ramping: 0.3
+    cost_flow_in:
+      data: 0.035
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Energy-hub dispatch factors alpha=0.23 (electrical), beta=0.57 (thermal); power:heat 
+      ratio 0.40. Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  chp_biomass_community:
+    base_tech: conversion
+    name: Biomass combined heat and power (community)
+    color: '#5B7A3A'
+    carrier_in: biomass
+    carrier_out:
+      - electricity
+      - heat
+    flow_in_eff: 1.0
+    flow_out_eff:
+      data:
+        - 0.2545
+        - 0.5655
+      index:
+        - electricity
+        - heat
+      dims: carriers
+    carrier_flow_ratio_out: 2.2220039292730847
+    flow_cap_max: 1500.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 2200.0
+      index: monetary
+      dims: costs
+    flow_ramping: 0.3
+    cost_flow_in:
+      data: 0.035
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Energy-hub dispatch factors alpha=0.25 (electrical), beta=0.57 (thermal); power:heat 
+      ratio 0.45. Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  chp_biomass_household:
+    base_tech: conversion
+    name: Biomass combined heat and power (household)
+    color: '#5B7A3A'
+    carrier_in: biomass
+    carrier_out:
+      - electricity
+      - heat
+    flow_in_eff: 1.0
+    flow_out_eff:
+      data:
+        - 0.2074
+        - 0.5926
+      index:
+        - electricity
+        - heat
+      dims: carriers
+    carrier_flow_ratio_out: 2.857280617164899
+    flow_cap_max: 5.0
+    lifetime: 15
+    cost_flow_cap:
+      data: 4500.0
+      index: monetary
+      dims: costs
+    flow_ramping: 0.3
+    cost_flow_in:
+      data: 0.035
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: Energy-hub dispatch factors alpha=0.21 (electrical), beta=0.59 (thermal); power:heat 
+      ratio 0.35. Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  heat_pump_electric_building:
+    base_tech: conversion
+    name: Air-source electric heat pump (building)
+    color: '#4C9F70'
+    carrier_in:
+      - electricity
+      - ambient_heat
+    carrier_out: heat
+    flow_in_eff:
+      data:
+        - 1.0
+        - 2.329476744186046
+      index:
+        - electricity
+        - ambient_heat
+      dims: carriers
+    flow_out_eff: 3.329476744186046
+    carrier_flow_ratio_in: 2.329476744186046
+    flow_cap_max: 80.0
+    lifetime: 18
+    cost_flow_cap:
+      data: 750.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=3.33 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.45). Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  heat_pump_electric_community:
+    base_tech: conversion
+    name: Air-source electric heat pump (community)
+    color: '#4C9F70'
+    carrier_in:
+      - electricity
+      - ambient_heat
+    carrier_out: heat
+    flow_in_eff:
+      data:
+        - 1.0
+        - 2.551441860465116
+      index:
+        - electricity
+        - ambient_heat
+      dims: carriers
+    flow_out_eff: 3.551441860465116
+    carrier_flow_ratio_in: 2.551441860465116
+    flow_cap_max: 1500.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 600.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=3.55 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.48). Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  heat_pump_electric_household:
+    base_tech: conversion
+    name: Air-source electric heat pump (household)
+    color: '#4C9F70'
+    carrier_in:
+      - electricity
+      - ambient_heat
+    carrier_out: heat
+    flow_in_eff:
+      data:
+        - 1.0
+        - 2.329476744186046
+      index:
+        - electricity
+        - ambient_heat
+      dims: carriers
+    flow_out_eff: 3.329476744186046
+    carrier_flow_ratio_in: 2.329476744186046
+    flow_cap_max: 10.0
+    lifetime: 18
+    cost_flow_cap:
+      data: 900.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=3.33 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.45). Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  heat_pump_geothermal_building:
+    base_tech: conversion
+    name: Ground-source (geothermal) heat pump (building)
+    color: '#2E6E8E'
+    carrier_in:
+      - electricity
+      - ground_heat
+    carrier_out: heat
+    flow_in_eff:
+      data:
+        - 1.0
+        - 3.545
+      index:
+        - electricity
+        - ground_heat
+      dims: carriers
+    flow_out_eff: 4.545
+    carrier_flow_ratio_in: 3.545
+    flow_cap_max: 100.0
+    lifetime: 25
+    cost_flow_cap:
+      data: 1500.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=4.54 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.5). Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  heat_pump_geothermal_community:
+    base_tech: conversion
+    name: Ground-source (geothermal) heat pump (community)
+    color: '#2E6E8E'
+    carrier_in:
+      - electricity
+      - ground_heat
+    carrier_out: heat
+    flow_in_eff:
+      data:
+        - 1.0
+        - 3.7268
+      index:
+        - electricity
+        - ground_heat
+      dims: carriers
+    flow_out_eff: 4.7268
+    carrier_flow_ratio_in: 3.7268
+    flow_cap_max: 2000.0
+    lifetime: 30
+    cost_flow_cap:
+      data: 1200.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=4.73 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.52). Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  heat_pump_geothermal_household:
+    base_tech: conversion
+    name: Ground-source (geothermal) heat pump (household)
+    color: '#2E6E8E'
+    carrier_in:
+      - electricity
+      - ground_heat
+    carrier_out: heat
+    flow_in_eff:
+      data:
+        - 1.0
+        - 3.545
+      index:
+        - electricity
+        - ground_heat
+      dims: carriers
+    flow_out_eff: 4.545
+    carrier_flow_ratio_in: 3.545
+    flow_cap_max: 10.0
+    lifetime: 25
+    cost_flow_cap:
+      data: 1800.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=4.54 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.5). Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).

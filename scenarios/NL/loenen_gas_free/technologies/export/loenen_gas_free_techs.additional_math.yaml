@@ -1,0 +1,92 @@
+parameters:
+  carrier_flow_ratio_in:
+    description: Fixed ratio of a technology's secondary input carrier flow to its primary input 
+      carrier flow (e.g. a heat pump's free heat source relative to its electricity draw).
+    default: 1
+  carrier_flow_ratio_out:
+    description: Fixed ratio of a technology's secondary output carrier flow to its primary output 
+      carrier flow (e.g. CHP heat relative to its electricity output).
+    default: 1
+constraints:
+  link_flow_in_carriers:
+    description: Ties each technology's secondary input carrier to its primary input carrier via 
+      carrier_flow_ratio_in.
+    foreach:
+      - nodes
+      - techs
+      - timesteps
+    where: carrier_flow_ratio_in AND [heat_pump_electric_building, heat_pump_electric_community, 
+      heat_pump_electric_household, heat_pump_geothermal_building, heat_pump_geothermal_community, 
+      heat_pump_geothermal_household] in techs
+    equations:
+      - where: '[heat_pump_electric_building] in techs'
+        expression: flow_in[carriers=ambient_heat] == flow_in[carriers=electricity] * 
+          carrier_flow_ratio_in
+      - where: '[heat_pump_electric_community] in techs'
+        expression: flow_in[carriers=ambient_heat] == flow_in[carriers=electricity] * 
+          carrier_flow_ratio_in
+      - where: '[heat_pump_electric_household] in techs'
+        expression: flow_in[carriers=ambient_heat] == flow_in[carriers=electricity] * 
+          carrier_flow_ratio_in
+      - where: '[heat_pump_geothermal_building] in techs'
+        expression: flow_in[carriers=ground_heat] == flow_in[carriers=electricity] * 
+          carrier_flow_ratio_in
+      - where: '[heat_pump_geothermal_community] in techs'
+        expression: flow_in[carriers=ground_heat] == flow_in[carriers=electricity] * 
+          carrier_flow_ratio_in
+      - where: '[heat_pump_geothermal_household] in techs'
+        expression: flow_in[carriers=ground_heat] == flow_in[carriers=electricity] * 
+          carrier_flow_ratio_in
+  link_flow_out_carriers:
+    description: Ties each technology's secondary output carrier to its primary output carrier via 
+      carrier_flow_ratio_out.
+    foreach:
+      - nodes
+      - techs
+      - timesteps
+    where: carrier_flow_ratio_out AND [chp_biomass_building, chp_biomass_community, 
+      chp_biomass_household] in techs
+    equations:
+      - where: '[chp_biomass_building] in techs'
+        expression: flow_out[carriers=heat] == flow_out[carriers=electricity] * 
+          carrier_flow_ratio_out
+      - where: '[chp_biomass_community] in techs'
+        expression: flow_out[carriers=heat] == flow_out[carriers=electricity] * 
+          carrier_flow_ratio_out
+      - where: '[chp_biomass_household] in techs'
+        expression: flow_out[carriers=heat] == flow_out[carriers=electricity] * 
+          carrier_flow_ratio_out
+  balance_conversion:
+    description: "Overrides the base balance_conversion for technologies with more than one carrier on
+      one side: restricts the balance to each side's primary carrier only, since link_flow_in_carriers/link_flow_out_carriers
+      ties every secondary carrier to that primary separately. Without this override the base (summed)
+      balance double-counts input for a technology with a real efficiency set on more than one carrier
+      of the same side -- see docs/calliope_schema_mapping.md. Absent for boiler and any other single-carrier-per-side
+      technology, which keep the unmodified base balance_conversion."
+    foreach:
+      - nodes
+      - techs
+      - timesteps
+    where: base_tech==conversion AND NOT include_storage==true AND [chp_biomass_building, 
+      chp_biomass_community, chp_biomass_household, heat_pump_electric_building, 
+      heat_pump_electric_community, heat_pump_electric_household, heat_pump_geothermal_building, 
+      heat_pump_geothermal_community, heat_pump_geothermal_household] in techs
+    equations:
+      - where: '[chp_biomass_building] in techs'
+        expression: flow_out_inc_eff[carriers=electricity] == flow_in_inc_eff[carriers=biomass]
+      - where: '[chp_biomass_community] in techs'
+        expression: flow_out_inc_eff[carriers=electricity] == flow_in_inc_eff[carriers=biomass]
+      - where: '[chp_biomass_household] in techs'
+        expression: flow_out_inc_eff[carriers=electricity] == flow_in_inc_eff[carriers=biomass]
+      - where: '[heat_pump_electric_building] in techs'
+        expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
+      - where: '[heat_pump_electric_community] in techs'
+        expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
+      - where: '[heat_pump_electric_household] in techs'
+        expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
+      - where: '[heat_pump_geothermal_building] in techs'
+        expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
+      - where: '[heat_pump_geothermal_community] in techs'
+        expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
+      - where: '[heat_pump_geothermal_household] in techs'
+        expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]

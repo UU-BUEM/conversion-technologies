@@ -1,0 +1,37 @@
+# Loenen gas-free scenario -- top-level Calliope model definition.
+#
+# Config block structurally validated against a real calliope==0.7.0
+# install (model.build() succeeds on the 3-node model_smoketest.yaml
+# variant of this same structure) -- see docs/phase4_solve.md for the
+# full trace of what that caught and fixed. Not yet run at this file's
+# real 1,260-node scale, and m.solve() is separately blocked by an
+# unrelated Pyomo/HiGHS backend compatibility bug in the validation
+# environment (also documented there) -- this file's own structure is
+# the part that's confirmed correct.
+#
+# Scope: 1,260 single-dwelling Loenen buildings (the 75 multi-unit
+# buildings are deferred -- see README.md "Resolution"). Every technology
+# that burns natural_gas is absent by construction (constraints.md #1) --
+# not zeroed, never imported.
+config:
+  init:
+    name: Loenen gas-free neighborhood
+    calliope_version: 0.7.0
+    math_paths:
+      additional_math: "technologies/export/loenen_gas_free_techs.additional_math.yaml"
+    extra_math: ["additional_math"]
+    mode: base
+  build: {}
+  solve:
+    # Real solver: CBC (conda-installed binary found in buem_env, not a
+    # scenario-specific install). `highs`/`appsi_highs` are both blocked
+    # by real Pyomo/Calliope version-mismatch bugs in this environment --
+    # see docs/phase4_solve.md "Solve attempt". Running this needs
+    # buem_env's `Library/bin/` (where cbc.exe lives) on PATH.
+    solver: cbc
+
+import:
+  - technologies/export/loenen_gas_free_techs.yaml
+  - nodes/demand_techs.yaml
+  - nodes/nodes.yaml
+  - nodes/data_tables.yaml

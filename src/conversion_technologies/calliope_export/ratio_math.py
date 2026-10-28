@@ -91,6 +91,39 @@ def _ratio(
     )
 
 
+def carrier_flow_ratios(tech: TechnologySpec) -> dict[str, float]:
+    """``{"carrier_flow_ratio_in": ...}``/``{"carrier_flow_ratio_out": ...}``
+    for ``tech`` -- empty if it has one carrier on each side (e.g. boiler).
+
+    The actual per-tech *value* -- confirmed against a real
+    ``calliope==0.7.0`` install, not assumed: Calliope 0.7.0's math-file
+    ``parameters:`` schema only accepts metadata (``default``/``title``/
+    ``description``), not an indexed ``data``/``index``/``dims`` block, so
+    the value itself has to live on each tech's own body in the model
+    definition (``modern.py`` calls this and merges the result in) rather
+    than inside ``additional_math.yaml``'s ``parameters`` block, which
+    only ever declares the parameter's existence/metadata now.
+    """
+    result: dict[str, float] = {}
+    secondary_in = _secondary_carriers(
+        tech.carriers_in, tech.primary_carrier_in, tech_id=tech.id, side="in"
+    )
+    if secondary_in:
+        assert tech.primary_carrier_in is not None
+        result["carrier_flow_ratio_in"] = _ratio(
+            tech.carriers_in, tech.primary_carrier_in, secondary_in[0], tech_id=tech.id, side="in"
+        )
+    secondary_out = _secondary_carriers(
+        tech.carriers_out, tech.primary_carrier_out, tech_id=tech.id, side="out"
+    )
+    if secondary_out:
+        assert tech.primary_carrier_out is not None
+        result["carrier_flow_ratio_out"] = _ratio(
+            tech.carriers_out, tech.primary_carrier_out, secondary_out[0], tech_id=tech.id, side="out"
+        )
+    return result
+
+
 def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
     """Calliope "additional math" (``parameters`` + ``constraints``) so a
     solve respects the fixed carrier ratio on every technology in ``techs``
@@ -103,8 +136,8 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
     link_in_equations: list[dict[str, str]] = []
     link_out_equations: list[dict[str, str]] = []
     balance_equations: list[dict[str, str]] = []
-    ratio_in_by_tech: dict[str, float] = {}
-    ratio_out_by_tech: dict[str, float] = {}
+    techs_with_ratio_in: set[str] = set()
+    techs_with_ratio_out: set[str] = set()
 
     for tech in techs:
         secondary_in = _secondary_carriers(
@@ -118,19 +151,10 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
 
         if secondary_in:
             carrier = secondary_in[0]
-            assert (
-                tech.primary_carrier_in is not None
-            )  # guaranteed by _secondary_carriers
-            ratio_in_by_tech[tech.id] = _ratio(
-                tech.carriers_in,
-                tech.primary_carrier_in,
-                carrier,
-                tech_id=tech.id,
-                side="in",
-            )
+            techs_with_ratio_in.add(tech.id)
             link_in_equations.append(
                 {
-                    "where": f"techs={tech.id}",
+                    "where": f"[{tech.id}] in techs",
                     "expression": (
                         f"flow_in[carriers={carrier}] == "
                         f"flow_in[carriers={tech.primary_carrier_in}] * carrier_flow_ratio_in"
@@ -140,19 +164,10 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
 
         if secondary_out:
             carrier = secondary_out[0]
-            assert (
-                tech.primary_carrier_out is not None
-            )  # guaranteed by _secondary_carriers
-            ratio_out_by_tech[tech.id] = _ratio(
-                tech.carriers_out,
-                tech.primary_carrier_out,
-                carrier,
-                tech_id=tech.id,
-                side="out",
-            )
+            techs_with_ratio_out.add(tech.id)
             link_out_equations.append(
                 {
-                    "where": f"techs={tech.id}",
+                    "where": f"[{tech.id}] in techs",
                     "expression": (
                         f"flow_out[carriers={carrier}] == "
                         f"flow_out[carriers={tech.primary_carrier_out}] * carrier_flow_ratio_out"
@@ -162,7 +177,7 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
 
         balance_equations.append(
             {
-                "where": f"techs={tech.id}",
+                "where": f"[{tech.id}] in techs",
                 "expression": (
                     f"flow_out_inc_eff[carriers={tech.primary_carrier_out}] == "
                     f"flow_in_inc_eff[carriers={tech.primary_carrier_in}]"
@@ -176,7 +191,12 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
     parameters: dict[str, Any] = {}
     constraints: dict[str, Any] = {}
 
-    if ratio_in_by_tech:
+    if techs_with_ratio_in:
+        # Metadata only -- confirmed against calliope==0.7.0, the real
+        # math-file `parameters:` schema has no room for indexed data
+        # (`data`/`index`/`dims`, used at model-definition level only).
+        # Each affected tech's actual value is set directly on its own
+        # body instead, via modern.py calling carrier_flow_ratios().
         parameters["carrier_flow_ratio_in"] = {
             "description": (
                 "Fixed ratio of a technology's secondary input carrier flow "
@@ -184,9 +204,6 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
                 "heat source relative to its electricity draw)."
             ),
             "default": 1,
-            "data": list(ratio_in_by_tech.values()),
-            "index": list(ratio_in_by_tech.keys()),
-            "dims": "techs",
         }
         constraints[_LINK_IN] = {
             "description": (
@@ -194,11 +211,20 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
                 "primary input carrier via carrier_flow_ratio_in."
             ),
             "foreach": ["nodes", "techs", "timesteps"],
-            "where": "carrier_flow_ratio_in",
+            # Restricting the tech dimension by explicit membership (not just
+            # the "carrier_flow_ratio_in" parameter-exists check) lets
+            # Calliope prune these techs before building the dense
+            # nodes x techs x timesteps array -- at 1,260-node scale,
+            # evaluating every equation branch against *all* techs first
+            # (see docs/calliope_schema_mapping.md "Carrier ratio math")
+            # caused an ArrayMemoryError on a 607M-element array.
+            "where": (
+                f"carrier_flow_ratio_in AND [{', '.join(sorted(techs_with_ratio_in))}] in techs"
+            ),
             "equations": link_in_equations,
         }
 
-    if ratio_out_by_tech:
+    if techs_with_ratio_out:
         parameters["carrier_flow_ratio_out"] = {
             "description": (
                 "Fixed ratio of a technology's secondary output carrier flow "
@@ -206,9 +232,6 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
                 "to its electricity output)."
             ),
             "default": 1,
-            "data": list(ratio_out_by_tech.values()),
-            "index": list(ratio_out_by_tech.keys()),
-            "dims": "techs",
         }
         constraints[_LINK_OUT] = {
             "description": (
@@ -216,10 +239,13 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
                 "primary output carrier via carrier_flow_ratio_out."
             ),
             "foreach": ["nodes", "techs", "timesteps"],
-            "where": "carrier_flow_ratio_out",
+            "where": (
+                f"carrier_flow_ratio_out AND [{', '.join(sorted(techs_with_ratio_out))}] in techs"
+            ),
             "equations": link_out_equations,
         }
 
+    balance_techs = techs_with_ratio_in | techs_with_ratio_out
     constraints[_BALANCE_OVERRIDE] = {
         "description": (
             "Overrides the base balance_conversion for technologies with "
@@ -234,7 +260,15 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
             "unmodified base balance_conversion."
         ),
         "foreach": ["nodes", "techs", "timesteps"],
-        "where": "base_tech==conversion AND NOT include_storage==true",
+        # Explicit [tech, ...] in techs membership (not just
+        # base_tech==conversion, which still matches every conversion tech
+        # in the model) keeps Calliope from building a dense
+        # nodes x all-techs x timesteps array -- see the matching note on
+        # link_flow_in_carriers above.
+        "where": (
+            "base_tech==conversion AND NOT include_storage==true AND "
+            f"[{', '.join(sorted(balance_techs))}] in techs"
+        ),
         "equations": balance_equations,
     }
 

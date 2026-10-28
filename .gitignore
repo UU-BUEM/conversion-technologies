@@ -62,5 +62,22 @@ push.ps1
 # Ad hoc local notes
 conversion_technologies_improvement*.txt
 
-# Claude Code runtime state (per-session lock file, not project data)
-.claude/scheduled_tasks.lock
+# Claude Code context (CLAUDE.md, .claude/) -- local-only, not pushed to
+# GitHub: internal AI-agent working notes/decision log, not meant for
+# external partners (EnerPlanET) browsing this repo. Matches the same
+# convention already in place in the sibling buem/weather repos. Previously
+# tracked and already present in prior pushed commits/tags -- this only
+# stops future changes from being committed, it doesn't rewrite history.
+CLAUDE.md
+.claude/
+
+# Scenario working data/outputs (regenerated from buem/occupancy/weather and
+# Calliope solves) -- scenarios/<country>/<scenario>/{data,outputs}/
+scenarios/*/*/data/*
+!scenarios/*/*/data/.gitkeep
+scenarios/*/*/outputs/*
+!scenarios/*/*/outputs/.gitkeep
+
+# Scratch venvs used for local checks (not the project's real environment)
+.venv_scenario_check/
+.venv_calliope_check/
