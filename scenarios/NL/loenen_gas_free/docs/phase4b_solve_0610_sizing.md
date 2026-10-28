@@ -5,9 +5,13 @@ not yet reconciled.** An EnerPlanET developer confirmed (2026-10-28) that
 production targets **Calliope 0.7.0**. That conflicts directly with this
 doc's own finding below -- `enerplanet/simulation-engine`'s actual,
 committed `webservice.dockerfile` pins `calliope==0.6.10`, not 0.7.0. One
-of these is stale (a Dockerfile not yet updated for a 0.7.0 migration, a
-different/newer service the developer meant, or the pin simply hasn't
-been revisited) -- flagging rather than guessing which. Everything below
+of these is stale -- leading hypothesis (2026-10-28, from the user, not
+independently confirmed): the developer's own local/dev environment has
+already moved to 0.7.0, while `webservice.dockerfile` reflects what's
+actually deployed, which hasn't been updated to match yet. Still worth
+confirming directly (e.g. does `simulation-engine`'s `main`/deploy branch
+have a newer, unmerged 0.7.0 Dockerfile change) before fully retiring the
+0.6.10 path. Everything below
 about 0.6.10's own scaling behavior remains correct and useful background
 regardless of which version turns out to be the real target; it's the
 *target* question, not these findings, that's still open. This was a
