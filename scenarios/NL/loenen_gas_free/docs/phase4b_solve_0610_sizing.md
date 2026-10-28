@@ -1,8 +1,19 @@
 # Phase 4b — sizing probe against calliope==0.6.10 (separate from Phase 4)
 
-**Status: in progress.** This is a second, independent investigation track,
-run in parallel with Phase 4's (`docs/phase4_solve.md`) `calliope==0.7.0`
-work -- it does not replace or modify anything there.
+**Status: findings stand; the version question has a real contradiction,
+not yet reconciled.** An EnerPlanET developer confirmed (2026-10-28) that
+production targets **Calliope 0.7.0**. That conflicts directly with this
+doc's own finding below -- `enerplanet/simulation-engine`'s actual,
+committed `webservice.dockerfile` pins `calliope==0.6.10`, not 0.7.0. One
+of these is stale (a Dockerfile not yet updated for a 0.7.0 migration, a
+different/newer service the developer meant, or the pin simply hasn't
+been revisited) -- flagging rather than guessing which. Everything below
+about 0.6.10's own scaling behavior remains correct and useful background
+regardless of which version turns out to be the real target; it's the
+*target* question, not these findings, that's still open. This was a
+second, independent investigation track, run in parallel with Phase 4's
+(`docs/phase4_solve.md`) `calliope==0.7.0` work -- it does not replace or
+modify anything there.
 
 ## Why this track exists
 
@@ -25,10 +36,9 @@ model-definition schema (`locations`/`energy_cap_max`/`energy_eff`/
 Memory/time behavior measured against 0.7.0 does not necessarily transfer
 to 0.6.10, and this repo's own `calliope_export/modern.py` currently emits
 0.7.0-schema YAML that 0.6.10 very likely cannot even load as-is -- a
-separate compatibility question from sizing, not yet resolved (user has
-asked a colleague to confirm which Calliope version `enerplanet` actually
-expects; this doc's findings stand regardless of that answer, since they're
-about 0.6.10's own scaling behavior).
+separate compatibility question from sizing. See the status note at the
+top of this document: an EnerPlanET developer has since confirmed 0.7.0,
+which conflicts with this Dockerfile pin -- not yet reconciled.
 
 ## Environment
 
