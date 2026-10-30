@@ -31,8 +31,8 @@ def _all_building_ids() -> list[str]:
     return list(nodes_full["nodes"].keys())
 
 
-def _solve_one(building: str) -> dict:
-    work_dir = SCENARIO_ROOT / "outputs/per_building" / building / "_model"
+def _solve_one(building: str, per_building_dir: Path) -> dict:
+    work_dir = per_building_dir / building / "_model"
     try:
         return solve(building, work_dir)
     except Exception as exc:  # noqa: BLE001 -- one building's failure must not kill the batch
@@ -51,6 +51,12 @@ def main() -> None:
         default=SCENARIO_ROOT / "outputs/all_buildings_results.json",
         help="Combined results JSON (per-building results + region total)",
     )
+    parser.add_argument(
+        "--per-building-dir",
+        type=Path,
+        default=SCENARIO_ROOT / "outputs/per_building",
+        help="Scratch dir for each building's one-node model (default: outputs/per_building)",
+    )
     args = parser.parse_args()
 
     buildings = _all_building_ids()
@@ -62,7 +68,9 @@ def main() -> None:
     results: list[dict] = []
     failures: list[dict] = []
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        futures = {pool.submit(_solve_one, b): b for b in buildings}
+        futures = {
+            pool.submit(_solve_one, b, args.per_building_dir): b for b in buildings
+        }
         for i, fut in enumerate(as_completed(futures), 1):
             r = fut.result()
             if "error" in r:

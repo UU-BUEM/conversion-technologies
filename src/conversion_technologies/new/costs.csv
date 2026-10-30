@@ -20,3 +20,12 @@ combined_heat_and_power,gas,community,Natural gas combined heat and power,#C1502
 combined_heat_and_power,biomass,household,Biomass combined heat and power,#5B7A3A,4500,,0.035,,0.10
 combined_heat_and_power,biomass,building,Biomass combined heat and power,#5B7A3A,3000,,0.035,,0.10
 combined_heat_and_power,biomass,community,Biomass combined heat and power,#5B7A3A,2200,,0.035,,0.10
+chiller,electric,household,Electric air conditioner (compression chiller),#5AA9E6,500,,,,0.10
+chiller,electric,building,Electric air conditioner (compression chiller),#5AA9E6,400,,,,0.10
+chiller,electric,community,Electric air conditioner (compression chiller),#5AA9E6,300,,,,0.10
+chiller,absorption,household,Absorption chiller,#9B6AA3,1200,,0.03,,0.10
+chiller,absorption,building,Absorption chiller,#9B6AA3,900,,0.03,,0.10
+chiller,absorption,community,Absorption chiller,#9B6AA3,700,,0.03,,0.10
+chiller,heat_pump_reversible,household,Reversible (heating/cooling) electric heat pump,#4C9F70,1100,,,,0.10
+chiller,heat_pump_reversible,building,Reversible (heating/cooling) electric heat pump,#4C9F70,900,,,,0.10
+chiller,heat_pump_reversible,community,Reversible (heating/cooling) electric heat pump,#4C9F70,700,,,,0.10

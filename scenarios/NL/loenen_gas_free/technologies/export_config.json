@@ -14,7 +14,16 @@
     "heat_pump_geothermal_community",
     "chp_biomass_household",
     "chp_biomass_building",
-    "chp_biomass_community"
+    "chp_biomass_community",
+    "chiller_electric_household",
+    "chiller_electric_building",
+    "chiller_electric_community",
+    "chiller_absorption_household",
+    "chiller_absorption_building",
+    "chiller_absorption_community",
+    "chiller_heat_pump_reversible_household",
+    "chiller_heat_pump_reversible_building",
+    "chiller_heat_pump_reversible_community"
   ],
   "schema": "modern",
   "output_dir": "scenarios/NL/loenen_gas_free/technologies/export"

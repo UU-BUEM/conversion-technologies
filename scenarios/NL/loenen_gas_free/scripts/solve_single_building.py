@@ -58,11 +58,14 @@ def build_single_building_model(building_node: str, work_dir: Path) -> Path:
 
     heat = pd.read_csv(SCENARIO_ROOT / "nodes/demand_heat.csv", index_col=0)[[building_node]]
     elec = pd.read_csv(SCENARIO_ROOT / "nodes/demand_elec.csv", index_col=0)[[building_node]]
+    cool = pd.read_csv(SCENARIO_ROOT / "nodes/demand_cool.csv", index_col=0)[[building_node]]
     heat.index.name = ""
     elec.index.name = ""
+    cool.index.name = ""
     (work_dir / "nodes").mkdir(parents=True, exist_ok=True)
     heat.to_csv(work_dir / "nodes/demand_heat.csv")
     elec.to_csv(work_dir / "nodes/demand_elec.csv")
+    cool.to_csv(work_dir / "nodes/demand_cool.csv")
 
     data_tables = _yaml.load((SCENARIO_ROOT / "nodes/data_tables.yaml").open(encoding="utf-8"))
     _write_yaml(work_dir / "nodes/data_tables.yaml", data_tables)

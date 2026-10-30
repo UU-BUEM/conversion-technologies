@@ -15,10 +15,17 @@ constraints:
       - nodes
       - techs
       - timesteps
-    where: carrier_flow_ratio_in AND [heat_pump_electric_building, heat_pump_electric_community, 
+    where: carrier_flow_ratio_in AND [chiller_absorption_building, chiller_absorption_community, 
+      chiller_absorption_household, heat_pump_electric_building, heat_pump_electric_community, 
       heat_pump_electric_household, heat_pump_geothermal_building, heat_pump_geothermal_community, 
       heat_pump_geothermal_household] in techs
     equations:
+      - where: '[chiller_absorption_building] in techs'
+        expression: flow_in[carriers=electricity] == flow_in[carriers=heat] * carrier_flow_ratio_in
+      - where: '[chiller_absorption_community] in techs'
+        expression: flow_in[carriers=electricity] == flow_in[carriers=heat] * carrier_flow_ratio_in
+      - where: '[chiller_absorption_household] in techs'
+        expression: flow_in[carriers=electricity] == flow_in[carriers=heat] * carrier_flow_ratio_in
       - where: '[heat_pump_electric_building] in techs'
         expression: flow_in[carriers=ambient_heat] == flow_in[carriers=electricity] * 
           carrier_flow_ratio_in
@@ -67,11 +74,18 @@ constraints:
       - nodes
       - techs
       - timesteps
-    where: base_tech==conversion AND NOT include_storage==true AND [chp_biomass_building, 
+    where: base_tech==conversion AND NOT include_storage==true AND [chiller_absorption_building, 
+      chiller_absorption_community, chiller_absorption_household, chp_biomass_building, 
       chp_biomass_community, chp_biomass_household, heat_pump_electric_building, 
       heat_pump_electric_community, heat_pump_electric_household, heat_pump_geothermal_building, 
       heat_pump_geothermal_community, heat_pump_geothermal_household] in techs
     equations:
+      - where: '[chiller_absorption_building] in techs'
+        expression: flow_out_inc_eff[carriers=cooling] == flow_in_inc_eff[carriers=heat]
+      - where: '[chiller_absorption_community] in techs'
+        expression: flow_out_inc_eff[carriers=cooling] == flow_in_inc_eff[carriers=heat]
+      - where: '[chiller_absorption_household] in techs'
+        expression: flow_out_inc_eff[carriers=cooling] == flow_in_inc_eff[carriers=heat]
       - where: '[chp_biomass_building] in techs'
         expression: flow_out_inc_eff[carriers=electricity] == flow_in_inc_eff[carriers=biomass]
       - where: '[chp_biomass_community] in techs'

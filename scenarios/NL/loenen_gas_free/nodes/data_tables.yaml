@@ -13,3 +13,10 @@ data_tables:
     add_dims:
       techs: demand_elec
       inputs: sink_use_equals
+  loenen_demand_cool:
+    table: nodes/demand_cool.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_cool
+      inputs: sink_use_equals

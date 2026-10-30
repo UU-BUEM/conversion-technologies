@@ -316,6 +316,61 @@ anymore. This package itself takes no `calliope` runtime dependency — it
 only ever writes YAML text — so nothing here pins a version; this is
 guidance for whoever builds the model that imports this package's output.
 
+## Cooling technologies (`new/chiller/`)
+
+The `chiller` category adds three variants, all sharing one
+`specific/__init__.py` builder: `electric` (compression chiller / AC,
+electricity in, cooling out), `absorption` (heat in, plus a small parasitic
+electricity draw, cooling out), and `heat_pump_reversible` (electricity in,
+cooling out -- the same physical unit as `heat_pump` in cooling mode, kept
+as its own catalog row with its own, lower COP and higher cost rather than
+sharing capacity with a `heat_pump` row; it is **not** a literal dual-mode
+technology with shared installed capacity, since Calliope's
+alternative/either-or carrier support (`carrier_tiers`/`carrier_ratios`) is
+removed in current Calliope and not modeled here anyway -- see root
+`.claude/open.md`'s first item).
+
+`cop` is a plain `technologies.csv` column, read directly -- unlike
+`heat_pump`'s Carnot-cycle-derived COP, there is no design-temperature
+formula here (cooling-mode delta-T isn't modeled), so a formula would be
+inventing precision the category doesn't have. Per-variant sanity bounds are
+enforced in `chiller/specific/__init__.py`: `electric` and
+`heat_pump_reversible` are electricity-driven vapor-compression cycles (COP
+> 1 by definition, bounded 2-8 and 1.5-5 respectively); `absorption` is
+heat-driven (COP < 1 by definition, bounded 0.4-1.3).
+
+`absorption`'s two input carriers (`heat` + a small `electricity` ratio via
+`aux_electricity_ratio`) are structurally identical to `heat_pump`'s
+electricity+ambient_heat case -- `calliope_export/ratio_math.py`'s
+`len(carriers) > 1` check already generates the needed `additional_math.yaml`
+entry for it with no new code (see "Carrier ratio math" above). `electric`
+and `heat_pump_reversible` have one carrier per side, like `boiler`, so need
+no custom math.
+
+A real pitfall confirmed against an actual Calliope 0.7.0 solve (not just
+algebra): `flow_cap_max` bounds `flow_out` *directly* (`flow_out_max` in
+Calliope's own `calliope/math/base.yaml` has no efficiency term), so a
+COP >= 1 technology's (electric AC, `heat_pump_reversible`) real max output
+is its nameplate `flow_cap_max`, while a COP < 1 technology's (`absorption`)
+real max output is `flow_cap_max * cop` -- *less* than nameplate, since its
+primary carrier is `heat`, not `cooling`, and that's what `flow_cap` caps.
+Whoever sizes combined capacity across several chiller variants (as
+`scenarios/NL/loenen_gas_free/scripts/build_nodes.py` does, to decide which
+nodes need building-scale fallback) must sum `flow_cap_max * min(1, cop)`
+per tech, not a bare `sum(flow_cap_max)` -- the bare sum overcounts exactly
+by absorption's shortfall, which produced 26 real Calliope infeasibilities
+on a full 1,260-building run before the fix (see
+`.claude/chiller/resolved.md` "cool-cap-margin-fix").
+
+Out of scope here (see `.claude/chiller/open.md`): which real heat source
+feeds an `absorption` row (community waste heat, a CHP byproduct, etc.) is a
+scenario-level node-wiring decision; an hourly cooling demand profile
+(`scenarios/`'s current `cooling_kWh` is annual-only) and any
+individual-vs-community competition between cooling (or heating) sources are
+`scenarios/`/`buem` work, not this package's. Same not-validated-against-a-
+running-Calliope-solve caveat as everywhere else in this doc applies to the
+`cooling` carrier wiring too.
+
 ## occupancy is out of scope
 
 `occupancy`'s `total_power_kwh` (hourly household/building electricity

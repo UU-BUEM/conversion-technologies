@@ -125,6 +125,228 @@ techs:
       index: monetary
       dims: costs
     comment: Nameplate efficiency 99%.
+  chiller_absorption_building:
+    base_tech: conversion
+    name: Absorption chiller (building)
+    color: '#9B6AA3'
+    carrier_in:
+      - heat
+      - electricity
+    carrier_out: cooling
+    flow_in_eff:
+      data:
+        - 1.0
+        - 0.03
+      index:
+        - heat
+        - electricity
+      dims: carriers
+    flow_out_eff: 0.7
+    carrier_flow_ratio_in: 0.03
+    flow_cap_max: 70.0
+    lifetime: 22
+    cost_flow_cap:
+      data: 900.0
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.03
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=0.70. Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  chiller_absorption_community:
+    base_tech: conversion
+    name: Absorption chiller (community)
+    color: '#9B6AA3'
+    carrier_in:
+      - heat
+      - electricity
+    carrier_out: cooling
+    flow_in_eff:
+      data:
+        - 1.0
+        - 0.02
+      index:
+        - heat
+        - electricity
+      dims: carriers
+    flow_out_eff: 0.75
+    carrier_flow_ratio_in: 0.02
+    flow_cap_max: 1200.0
+    lifetime: 25
+    cost_flow_cap:
+      data: 700.0
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.03
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=0.75. Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  chiller_absorption_household:
+    base_tech: conversion
+    name: Absorption chiller (household)
+    color: '#9B6AA3'
+    carrier_in:
+      - heat
+      - electricity
+    carrier_out: cooling
+    flow_in_eff:
+      data:
+        - 1.0
+        - 0.03
+      index:
+        - heat
+        - electricity
+      dims: carriers
+    flow_out_eff: 0.65
+    carrier_flow_ratio_in: 0.03
+    flow_cap_max: 8.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 1200.0
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.03
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=0.65. Multi-carrier flows share one internal capacity variable; per-carrier 
+      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
+      alternative/either-or carriers would need hand-written user-defined math 
+      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  chiller_electric_building:
+    base_tech: conversion
+    name: Electric air conditioner (compression chiller) (building)
+    color: '#5AA9E6'
+    carrier_in: electricity
+    carrier_out: cooling
+    flow_in_eff: 1.0
+    flow_out_eff: 3.5
+    flow_cap_max: 60.0
+    lifetime: 18
+    cost_flow_cap:
+      data: 400.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=3.50.
+  chiller_electric_community:
+    base_tech: conversion
+    name: Electric air conditioner (compression chiller) (community)
+    color: '#5AA9E6'
+    carrier_in: electricity
+    carrier_out: cooling
+    flow_in_eff: 1.0
+    flow_out_eff: 4.0
+    flow_cap_max: 1000.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 300.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=4.00.
+  chiller_electric_household:
+    base_tech: conversion
+    name: Electric air conditioner (compression chiller) (household)
+    color: '#5AA9E6'
+    carrier_in: electricity
+    carrier_out: cooling
+    flow_in_eff: 1.0
+    flow_out_eff: 3.2
+    flow_cap_max: 8.0
+    lifetime: 15
+    cost_flow_cap:
+      data: 500.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=3.20.
+  chiller_heat_pump_reversible_building:
+    base_tech: conversion
+    name: Reversible (heating/cooling) electric heat pump (building)
+    color: '#4C9F70'
+    carrier_in: electricity
+    carrier_out: cooling
+    flow_in_eff: 1.0
+    flow_out_eff: 3.0
+    flow_cap_max: 60.0
+    lifetime: 18
+    cost_flow_cap:
+      data: 900.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=3.00.
+  chiller_heat_pump_reversible_community:
+    base_tech: conversion
+    name: Reversible (heating/cooling) electric heat pump (community)
+    color: '#4C9F70'
+    carrier_in: electricity
+    carrier_out: cooling
+    flow_in_eff: 1.0
+    flow_out_eff: 3.2
+    flow_cap_max: 1000.0
+    lifetime: 20
+    cost_flow_cap:
+      data: 700.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=3.20.
+  chiller_heat_pump_reversible_household:
+    base_tech: conversion
+    name: Reversible (heating/cooling) electric heat pump (household)
+    color: '#4C9F70'
+    carrier_in: electricity
+    carrier_out: cooling
+    flow_in_eff: 1.0
+    flow_out_eff: 2.8
+    flow_cap_max: 8.0
+    lifetime: 18
+    cost_flow_cap:
+      data: 1100.0
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    comment: COP=2.80.
   chp_biomass_building:
     base_tech: conversion
     name: Biomass combined heat and power (building)

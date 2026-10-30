@@ -34,6 +34,8 @@ _CATEGORY_ALIASES = {
     "boiler": "boiler",
     "chp": "combined_heat_and_power",
     "combined_heat_and_power": "combined_heat_and_power",
+    "ac": "chiller",
+    "chiller": "chiller",
 }
 
 # TechnologySpec.scale is always one of these three, for every category.
@@ -228,7 +230,7 @@ def _add_filter_arguments(subparser: argparse.ArgumentParser) -> None:
         "--category",
         choices=sorted(_CATEGORY_ALIASES),
         default=None,
-        help="Filter by category (aliases: hp, boiler, chp).",
+        help="Filter by category (aliases: hp, boiler, chp, ac).",
     )
     subparser.add_argument(
         "--variant",

@@ -29,6 +29,8 @@ _TECH_COLUMNS = [
     "alpha",
     "beta",
     "flow_ramping",
+    "cop",
+    "aux_electricity_ratio",
 ]
 _COST_COLUMNS = [
     "category",
@@ -63,7 +65,8 @@ def _write_split_csvs(rows: list[dict], directory: Path) -> None:
 
 def test_load_technology_rows_coerces_blanks_and_numbers() -> None:
     rows = load_technology_rows("conversion_technologies.new")
-    assert len(rows) == 21  # 3 boiler variants + 2 heat pump + 2 CHP, x3 scales
+    # 3 boiler + 2 heat pump + 2 CHP + 3 chiller variants, x3 scales
+    assert len(rows) == 30
 
     row = next(
         r
@@ -94,7 +97,7 @@ def test_load_technology_rows_joins_costs_by_category_variant_scale() -> None:
 def test_load_technology_rows_filters_by_category() -> None:
     rows = load_technology_rows("conversion_technologies.new")
     categories = {r["category"] for r in rows}
-    assert categories == {"boiler", "heat_pump", "combined_heat_and_power"}
+    assert categories == {"boiler", "heat_pump", "combined_heat_and_power", "chiller"}
 
 
 def test_load_technology_rows_rejects_an_orphaned_costs_row(

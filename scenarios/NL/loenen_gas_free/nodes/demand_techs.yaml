@@ -9,6 +9,11 @@ techs:
     name: Electricity demand (appliances; cooking already included)
     carrier_in: electricity
     comment: "sink_use_equals = buem's elec_kW (occupancy's elecLoad). No Loenen building in this population cooks with gas (verified: cooking_gas_kW sums to 0 for all 1,260 buildings), so no separate cooking carrier is modeled."
+  demand_cool:
+    base_tech: demand
+    name: Cooling demand (space cooling)
+    carrier_in: cooling
+    comment: "sink_use_equals = -buem's Q_cool_kW, clipped to >= 0 (buem's own sign convention: Q_cool_kW <= 0, a negative net heat flow). See conversion_technologies' chiller category (docs/calliope_schema_mapping.md 'Cooling technologies') for the electric/absorption/reversible-heat-pump options this demand is met by. Not verified against a running Calliope solve -- same caveat as demand_heat above."
   supply_grid_electricity:
     base_tech: supply
     name: Grid electricity import

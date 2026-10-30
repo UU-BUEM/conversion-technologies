@@ -9,11 +9,15 @@ from __future__ import annotations
 
 from conversion_technologies.new import (  # noqa: F401
     boiler,
+    chiller,
     combined_heat_and_power,
     heat_pump,
 )
 from conversion_technologies.new.boiler import (
     specific as _boiler_specific,  # noqa: F401
+)
+from conversion_technologies.new.chiller import (
+    specific as _chiller_specific,  # noqa: F401
 )
 from conversion_technologies.new.combined_heat_and_power import (  # noqa: F401
     specific as _chp_specific,
