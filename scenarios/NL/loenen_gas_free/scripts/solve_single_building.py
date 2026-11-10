@@ -14,9 +14,10 @@ block, in parallel, and sums them.
 
 Uses this repo's own real `calliope_export` output (0.7.0 `flow_*`
 schema, the real `ratio_math.py`-generated carrier-ratio math) -- not a
-simplified stand-in schema. Requires a real `calliope==0.7.0` install
-(same as `scripts/solve_full.py`; see docs/phase4_solve.md for how this
-repo's own `.venv_calliope_check/` was set up) and CBC on PATH.
+simplified stand-in schema. Requires `calliope==0.7.0` and CBC: use the `scenario_env` conda environment
+(`conda env create -f infrastructure/env/scenario_env.yml`; Python 3.12,
+CBC via `coincbc`), verified to reproduce the earlier `.venv_calliope_check/`
+results exactly.
 
 Usage (from the scenario root, scenarios/NL/loenen_gas_free/):
     python scripts/solve_single_building.py bldg_8
@@ -63,6 +64,31 @@ def _is_biomass_tech(tech_id: str) -> bool:
     return "biomass" in tech_id
 
 
+def _apply_building_scale_fallback(node: dict, peak_heat_kw: float) -> None:
+    """Re-apply build_nodes.py's building-scale fallback for THIS variant.
+
+    build_nodes.py gives a node the building-scale heat techs when its peak
+    heat demand exceeds 90 % of the combined household-scale ceiling -- but
+    evaluates that with every household tech present. Once a variant removes
+    some (``--no-biomass`` drops the 15 kW pellet boiler: 75 -> 60 kW), the
+    same rule must be evaluated on what remains, or dwellings with a 61-64 kW
+    peak are infeasible. Same rule, same 90 % margin, applied per variant.
+    """
+    from build_nodes import _BUILDING_TECH_IDS, _TECHS_EXPORT_PATH, _cap
+
+    techs = _yaml.load(_TECHS_EXPORT_PATH.open(encoding="utf-8"))["techs"]
+    household_heat = [
+        t
+        for t in node["techs"]
+        if t.endswith("_household") and t.startswith(("boiler_", "heat_pump_", "chp_"))
+    ]
+    ceiling = sum(_cap(techs[t]) for t in household_heat)
+    if peak_heat_kw > 0.9 * ceiling:
+        for t in _BUILDING_TECH_IDS:
+            if not _is_biomass_tech(t):
+                node["techs"].setdefault(t, {})
+
+
 def build_single_building_model(
     building_node: str, work_dir: Path, cooling: bool = True, biomass: bool = True
 ) -> Path:
@@ -78,16 +104,17 @@ def build_single_building_model(
         node["techs"] = {
             t: v for t, v in node["techs"].items() if not _is_cooling_tech(t)
         }
+    heat = pd.read_csv(SCENARIO_ROOT / "nodes/demand_heat.csv", index_col=0)[
+        [building_node]
+    ]
     if not biomass:
         node["techs"] = {
             t: v for t, v in node["techs"].items() if not _is_biomass_tech(t)
         }
+        _apply_building_scale_fallback(node, float(heat[building_node].max()))
     single_node = {"nodes": {building_node: node}}
     _write_yaml(work_dir / "nodes.yaml", single_node)
 
-    heat = pd.read_csv(SCENARIO_ROOT / "nodes/demand_heat.csv", index_col=0)[
-        [building_node]
-    ]
     elec = pd.read_csv(SCENARIO_ROOT / "nodes/demand_elec.csv", index_col=0)[
         [building_node]
     ]

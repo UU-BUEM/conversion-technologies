@@ -58,6 +58,43 @@ def _cost_field(value: float) -> dict[str, Any]:
     return {"data": value, "index": "monetary", "dims": "costs"}
 
 
+# Calliope 0.7 creates one ``flow_cap`` per carrier -- inputs included -- and
+# its base math applies these parameters to every one of them
+# (calliope/math/base.yaml: ``flow_cap_max``/``flow_cap_min`` bound each
+# carrier's flow_cap; ``cost_investment_flow_cap`` is ``foreach carriers``;
+# ``cost_operation_fixed`` is ``sum(cost_om_annual * flow_cap, over=carriers)``).
+# A scalar value therefore caps the *input* capacity too and charges
+# investment/O&M on input *and* output capacity. This package's values are
+# all per kW of the technology's primary output, so -- exactly as Calliope's
+# own example models do (``index: heat, dims: carriers``) -- they are indexed
+# on that carrier only. This is a shape translation dictated by Calliope's
+# math, not a parameter value (CLAUDE.md "Hard conventions" #7).
+_PER_CAPACITY_PARAMS = ("flow_cap_max", "flow_cap_min", "cost_om_annual")
+
+
+def _primary_out(tech: TechnologySpec) -> str:
+    if tech.primary_carrier_out:
+        return tech.primary_carrier_out
+    if len(tech.carriers_out) == 1:
+        return next(iter(tech.carriers_out))
+    raise ValueError(
+        f"Technology '{tech.id}' has several output carriers but no "
+        "primary_carrier_out -- its capacity has no unambiguous carrier."
+    )
+
+
+def _capacity_field(value: float, carrier: str) -> dict[str, Any]:
+    return {"data": value, "index": carrier, "dims": "carriers"}
+
+
+def _capacity_cost_field(value: float, carrier: str) -> dict[str, Any]:
+    return {
+        "data": value,
+        "index": [["monetary", carrier]],
+        "dims": ["costs", "carriers"],
+    }
+
+
 def export(tech: TechnologySpec) -> dict[str, Any]:
     """Return a ``conversion`` tech body for ``tech``."""
     body: dict[str, Any] = {"base_tech": "conversion", "name": tech.name}
@@ -74,12 +111,22 @@ def export(tech: TechnologySpec) -> dict[str, Any]:
     # Calliope 0.7.0.
     body.update(carrier_flow_ratios(tech))
 
-    body["flow_cap_max"] = tech.flow_cap_max
+    out = _primary_out(tech)
+    body["flow_cap_max"] = _capacity_field(tech.flow_cap_max, out)
     body["lifetime"] = tech.lifetime
-    body["cost_flow_cap"] = _cost_field(tech.cost_flow_cap)
+    body["cost_flow_cap"] = _capacity_cost_field(tech.cost_flow_cap, out)
 
     for key, value in tech.params.items():
-        body[key] = _cost_field(value) if key.startswith("cost_") else value
+        if key in _PER_CAPACITY_PARAMS:
+            body[key] = (
+                _capacity_cost_field(value, out)
+                if key.startswith("cost_")
+                else _capacity_field(value, out)
+            )
+        elif key.startswith("cost_"):
+            body[key] = _cost_field(value)
+        else:
+            body[key] = value
 
     comment_parts = [tech.notes] if tech.notes else []
     if len(tech.carriers_in) > 1 or len(tech.carriers_out) > 1:

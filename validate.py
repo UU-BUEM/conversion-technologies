@@ -6,6 +6,7 @@ Usage: python validate.py [--env NAME] [--full] [--skip-docker]
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -36,18 +37,60 @@ def _run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, capture_output=True, text=True, cwd=REPO_ROOT, **kwargs)  # type: ignore[arg-type]
 
 
+def _env_prefix(env_name: str) -> Path | None:
+    """Directory of conda env ``env_name`` in the usual locations, if present."""
+    roots = [Path.home() / ".conda" / "envs"]
+    for var in ("CONDA_PREFIX", "CONDA_EXE"):
+        value = os.environ.get(var)
+        if value:
+            # CONDA_PREFIX=<base or env>, CONDA_EXE=<base>/Scripts|bin/conda
+            base = Path(value).parent.parent if var == "CONDA_EXE" else Path(value)
+            roots += [base / "envs", base.parent]
+    for root in roots:
+        if (root / env_name / "conda-meta").is_dir():
+            return root / env_name
+    return None
+
+
+_ENV_PATH: dict[str, str] = {}
+
+
+def _python(env_name: str) -> list[str]:
+    """Command prefix that runs ``python`` inside conda env ``env_name``.
+
+    Prefers ``conda run`` (``conda`` on PATH, or ``CONDA_EXE`` -- set by
+    ``conda init`` even when ``conda`` itself is not on PATH, e.g. in Git
+    Bash). Otherwise runs the env's own interpreter directly, with the env's
+    DLL folders prepended to PATH (an unactivated conda env on Windows
+    cannot load numpy's DLLs without them).
+    """
+    conda = shutil.which("conda") or os.environ.get("CONDA_EXE")
+    if conda:
+        return [conda, "run", "-n", env_name, "python"]
+    prefix = _env_prefix(env_name)
+    if prefix is None:
+        raise SystemExit(
+            f"conda env '{env_name}' not found and `conda` is not on PATH; create it "
+            "with: conda env create -f infrastructure/env/conversion_env.yml"
+        )
+    dirs = [prefix, prefix / "Library" / "bin", prefix / "Scripts", prefix / "bin"]
+    _ENV_PATH["PATH"] = os.pathsep.join(
+        [str(d) for d in dirs if d.is_dir()] + [os.environ.get("PATH", "")]
+    )
+    exe = prefix / ("python.exe" if os.name == "nt" else "bin/python")
+    return [str(exe)]
+
+
+def _run_in_env(env_name: str, args: list[str]) -> subprocess.CompletedProcess[str]:
+    cmd = _python(env_name) + args
+    env = {**os.environ, **_ENV_PATH} if _ENV_PATH else None
+    return _run(cmd, env=env)
+
+
 def check_conda_env(env_name: str) -> bool:
     print(f"[1/5] Conda environment '{env_name}' + core imports...")
-    result = _run(
-        [
-            "conda",
-            "run",
-            "-n",
-            env_name,
-            "python",
-            "-c",
-            "import numpy, ruamel.yaml, conversion_technologies",
-        ]
+    result = _run_in_env(
+        env_name, ["-c", "import numpy, ruamel.yaml, conversion_technologies"]
     )
     ok = result.returncode == 0
     print("  OK" if ok else f"  FAILED\n{result.stderr}")
@@ -56,30 +99,8 @@ def check_conda_env(env_name: str) -> bool:
 
 def check_cli(env_name: str) -> bool:
     print("[2/5] CLI (info / list)...")
-    info = _run(
-        [
-            "conda",
-            "run",
-            "-n",
-            env_name,
-            "python",
-            "-m",
-            "conversion_technologies",
-            "info",
-        ]
-    )
-    listing = _run(
-        [
-            "conda",
-            "run",
-            "-n",
-            env_name,
-            "python",
-            "-m",
-            "conversion_technologies",
-            "list",
-        ]
-    )
+    info = _run_in_env(env_name, ["-m", "conversion_technologies", "info"])
+    listing = _run_in_env(env_name, ["-m", "conversion_technologies", "list"])
     ok = info.returncode == 0 and listing.returncode == 0
     print("  OK" if ok else f"  FAILED\n{info.stderr}\n{listing.stderr}")
     return ok
@@ -87,9 +108,7 @@ def check_cli(env_name: str) -> bool:
 
 def check_pytest(env_name: str) -> bool:
     print("[3/5] pytest suite...")
-    result = _run(
-        ["conda", "run", "-n", env_name, "python", "-m", "pytest", "-q", "--tb=short"]
-    )
+    result = _run_in_env(env_name, ["-m", "pytest", "-q", "--tb=short"])
     ok = result.returncode == 0
     print("  OK" if ok else f"  FAILED (non-fatal)\n{result.stdout}\n{result.stderr}")
     return ok

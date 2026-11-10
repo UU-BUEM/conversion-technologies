@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" role="img" aria-label="Comparison: a combined model solves all buildings' timesteps together through one shared capacity-sizing block and grows unbounded in memory as node count rises; the decomposed model solves each building's own timesteps against its own capacity-sizing block independently, so N small solves run in parallel and are summed.">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2b2b2b"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="800" height="300" fill="#ffffff"/>
+
+  <text x="14" y="26" font-family="monospace" font-size="13" font-weight="600" fill="#2b2b2b">Combined model (one calliope.Model, N nodes)</text>
+  <rect x="14" y="40" width="772" height="68" rx="8" fill="none" stroke="#9a4a3a" stroke-width="1.5"/>
+  <g font-family="monospace" font-size="11" fill="#2b2b2b">
+    <rect x="28" y="54" width="110" height="40" rx="4" fill="#f5e7e2" stroke="#9a4a3a"/>
+    <text x="83" y="78" text-anchor="middle">bldg 1 vars</text>
+    <rect x="150" y="54" width="110" height="40" rx="4" fill="#f5e7e2" stroke="#9a4a3a"/>
+    <text x="205" y="78" text-anchor="middle">bldg 2 vars</text>
+    <text x="282" y="80" font-size="16">&#8230;</text>
+    <rect x="320" y="54" width="130" height="40" rx="4" fill="#f5e7e2" stroke="#9a4a3a"/>
+    <text x="385" y="78" text-anchor="middle">bldg 1,260 vars</text>
+  </g>
+  <text x="470" y="78" font-family="monospace" font-size="11" fill="#9a4a3a">one shared backend build &#8594; unbounded memory growth, never finishes at full year</text>
+  <line x1="14" y1="120" x2="786" y2="120" stroke="#2b2b2b" stroke-opacity="0.25"/>
+
+  <text x="14" y="146" font-family="monospace" font-size="13" font-weight="600" fill="#2b2b2b">Decomposed model (N independent one-node models)</text>
+  <g font-family="monospace" font-size="11" fill="#2b2b2b">
+    <rect x="14" y="160" width="140" height="54" rx="6" fill="#e2efe9" stroke="#1f6f5c" stroke-width="1.5"/>
+    <text x="84" y="183" text-anchor="middle">bldg 1 model</text>
+    <text x="84" y="198" text-anchor="middle" font-size="10" fill="#5b5750">own vars + timesteps</text>
+    <rect x="184" y="160" width="140" height="54" rx="6" fill="#e2efe9" stroke="#1f6f5c" stroke-width="1.5"/>
+    <text x="254" y="183" text-anchor="middle">bldg 2 model</text>
+    <text x="254" y="198" text-anchor="middle" font-size="10" fill="#5b5750">own vars + timesteps</text>
+    <text x="368" y="192" font-size="16">&#8230;</text>
+    <rect x="410" y="160" width="160" height="54" rx="6" fill="#e2efe9" stroke="#1f6f5c" stroke-width="1.5"/>
+    <text x="490" y="183" text-anchor="middle">bldg 1,260 model</text>
+    <text x="490" y="198" text-anchor="middle" font-size="10" fill="#5b5750">own vars + timesteps</text>
+  </g>
+
+  <line x1="84" y1="214" x2="84" y2="238" stroke="#2b2b2b" marker-end="url(#arrow)"/>
+  <line x1="254" y1="214" x2="254" y2="238" stroke="#2b2b2b" marker-end="url(#arrow)"/>
+  <line x1="490" y1="214" x2="490" y2="238" stroke="#2b2b2b" marker-end="url(#arrow)"/>
+  <text x="84" y="233" text-anchor="middle" font-family="monospace" font-size="10" fill="#5b5750">solve</text>
+  <text x="254" y="233" text-anchor="middle" font-family="monospace" font-size="10" fill="#5b5750">solve</text>
+  <text x="490" y="233" text-anchor="middle" font-family="monospace" font-size="10" fill="#5b5750">solve</text>
+
+  <rect x="14" y="246" width="772" height="40" rx="8" fill="none" stroke="#1f6f5c" stroke-width="1.5"/>
+  <text x="400" y="270" text-anchor="middle" font-family="monospace" font-size="12" font-weight="600" fill="#1f6f5c">sum results &#8594; region total (exact, because nothing links the buildings)</text>
+</svg>

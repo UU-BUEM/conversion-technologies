@@ -7,16 +7,27 @@ techs:
     carrier_out: heat
     flow_in_eff: 1.0
     flow_out_eff: 0.87
-    flow_cap_max: 100.0
+    flow_cap_max:
+      data: 100.0
+      index: heat
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 306.8
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 5.33
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -30,16 +41,27 @@ techs:
     carrier_out: heat
     flow_in_eff: 1.0
     flow_out_eff: 1.0117
-    flow_cap_max: 2000.0
+    flow_cap_max:
+      data: 2000.0
+      index: heat
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 886.3
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 40.405
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_flow_out:
       data: 0.003415
       index: monetary
@@ -57,16 +79,27 @@ techs:
     carrier_out: heat
     flow_in_eff: 1.0
     flow_out_eff: 0.84
-    flow_cap_max: 15.0
+    flow_cap_max:
+      data: 15.0
+      index: heat
+      dims: carriers
     lifetime: 20
     cost_flow_cap:
       data: 542.7
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 42.06
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -80,16 +113,27 @@ techs:
     carrier_out: heat
     flow_in_eff: 1.0
     flow_out_eff: 0.99
-    flow_cap_max: 60.0
+    flow_cap_max:
+      data: 60.0
+      index: heat
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 92.0
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 1.56
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -103,16 +147,27 @@ techs:
     carrier_out: heat
     flow_in_eff: 1.0
     flow_out_eff: 0.99
-    flow_cap_max: 500.0
+    flow_cap_max:
+      data: 500.0
+      index: heat
+      dims: carriers
     lifetime: 20
     cost_flow_cap:
       data: 154.6
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 1.138
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_flow_out:
       data: 0.00095
       index: monetary
@@ -130,16 +185,27 @@ techs:
     carrier_out: heat
     flow_in_eff: 1.0
     flow_out_eff: 0.99
-    flow_cap_max: 12.0
+    flow_cap_max:
+      data: 12.0
+      index: heat
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 289.6
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 5.0
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -163,16 +229,27 @@ techs:
       dims: carriers
     flow_out_eff: 0.7
     carrier_flow_ratio_in: 0.02
-    flow_cap_max: 1200.0
+    flow_cap_max:
+      data: 1200.0
+      index: cooling
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 218.9
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 8.76
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -189,16 +266,27 @@ techs:
     carrier_out: cooling
     flow_in_eff: 1.0
     flow_out_eff: 3.08
-    flow_cap_max: 60.0
+    flow_cap_max:
+      data: 60.0
+      index: cooling
+      dims: carriers
     lifetime: 15
     cost_flow_cap:
       data: 360.5
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 14.42
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -212,16 +300,27 @@ techs:
     carrier_out: cooling
     flow_in_eff: 1.0
     flow_out_eff: 3.36
-    flow_cap_max: 1000.0
+    flow_cap_max:
+      data: 1000.0
+      index: cooling
+      dims: carriers
     lifetime: 20
     cost_flow_cap:
       data: 265.2
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 10.61
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -235,16 +334,27 @@ techs:
     carrier_out: cooling
     flow_in_eff: 1.0
     flow_out_eff: 5.04
-    flow_cap_max: 8.0
+    flow_cap_max:
+      data: 8.0
+      index: cooling
+      dims: carriers
     lifetime: 12
     cost_flow_cap:
       data: 473.2
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 18.95
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -258,16 +368,27 @@ techs:
     carrier_out: cooling
     flow_in_eff: 1.0
     flow_out_eff: 3.815
-    flow_cap_max: 60.0
+    flow_cap_max:
+      data: 60.0
+      index: cooling
+      dims: carriers
     lifetime: 15
     cost_flow_cap:
       data: 1103.5
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 44.14
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -281,16 +402,27 @@ techs:
     carrier_out: cooling
     flow_in_eff: 1.0
     flow_out_eff: 3.36
-    flow_cap_max: 1000.0
+    flow_cap_max:
+      data: 1000.0
+      index: cooling
+      dims: carriers
     lifetime: 20
     cost_flow_cap:
       data: 265.2
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 10.61
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -304,16 +436,27 @@ techs:
     carrier_out: cooling
     flow_in_eff: 1.0
     flow_out_eff: 5.04
-    flow_cap_max: 8.0
+    flow_cap_max:
+      data: 8.0
+      index: cooling
+      dims: carriers
     lifetime: 14
     cost_flow_cap:
       data: 367.3
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 16.0
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - cooling
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -337,17 +480,28 @@ techs:
         - heat
       dims: carriers
     carrier_flow_ratio_out: 5.732970027247956
-    flow_cap_max: 1500.0
+    flow_cap_max:
+      data: 1500.0
+      index: electricity
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 7494.4
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - electricity
+      dims:
+        - costs
+        - carriers
     flow_ramping: 1.0
     cost_om_annual:
       data: 340.182
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - electricity
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -375,16 +529,27 @@ techs:
       dims: carriers
     flow_out_eff: 2.9891302325581397
     carrier_flow_ratio_in: 1.9891302325581397
-    flow_cap_max: 80.0
+    flow_cap_max:
+      data: 80.0
+      index: heat
+      dims: carriers
     lifetime: 20
     cost_flow_cap:
       data: 976.1
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 11.42
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -412,16 +577,27 @@ techs:
       dims: carriers
     flow_out_eff: 2.750147790697674
     carrier_flow_ratio_in: 1.7501477906976741
-    flow_cap_max: 1500.0
+    flow_cap_max:
+      data: 1500.0
+      index: heat
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 1150.0
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 2.127
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_flow_out:
       data: 0.00086
       index: monetary
@@ -453,16 +629,27 @@ techs:
       dims: carriers
     flow_out_eff: 3.299881395348837
     carrier_flow_ratio_in: 2.299881395348837
-    flow_cap_max: 19.0
+    flow_cap_max:
+      data: 19.0
+      index: heat
+      dims: carriers
     lifetime: 20
     cost_flow_cap:
       data: 1838.4
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 50.0
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -490,16 +677,27 @@ techs:
       dims: carriers
     flow_out_eff: 3.2996699999999994
     carrier_flow_ratio_in: 2.2996699999999994
-    flow_cap_max: 100.0
+    flow_cap_max:
+      data: 100.0
+      index: heat
+      dims: carriers
     lifetime: 22
     cost_flow_cap:
       data: 1220.1
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 6.92
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary
@@ -527,16 +725,27 @@ techs:
       dims: carriers
     flow_out_eff: 3.09969
     carrier_flow_ratio_in: 2.09969
-    flow_cap_max: 2000.0
+    flow_cap_max:
+      data: 2000.0
+      index: heat
+      dims: carriers
     lifetime: 25
     cost_flow_cap:
       data: 1130.0
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 2.127
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_flow_out:
       data: 0.00307
       index: monetary
@@ -568,16 +777,27 @@ techs:
       dims: carriers
     flow_out_eff: 3.549645
     carrier_flow_ratio_in: 2.549645
-    flow_cap_max: 29.0
+    flow_cap_max:
+      data: 29.0
+      index: heat
+      dims: carriers
     lifetime: 22
     cost_flow_cap:
       data: 2328.6
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_om_annual:
       data: 50.0
-      index: monetary
-      dims: costs
+      index:
+        -   - monetary
+            - heat
+      dims:
+        - costs
+        - carriers
     cost_interest_rate:
       data: 0.0225
       index: monetary

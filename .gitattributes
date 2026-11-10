@@ -1,0 +1,15 @@
+# Normalise line endings: the repository stores LF for every text file;
+# Git converts on checkout according to each contributor's platform/settings.
+# Stops the "LF will be replaced by CRLF" warnings on every Windows commit
+# and keeps diffs free of whole-file line-ending churn.
+* text=auto
+
+# Windows-only scripts keep CRLF in the working tree on every platform.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell scripts must stay LF, even when checked out on Windows.
+*.sh text eol=lf
+
+# Data tables: always text, diffed line by line.
+*.csv text

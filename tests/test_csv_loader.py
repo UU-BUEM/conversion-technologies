@@ -163,7 +163,8 @@ def test_conversion_tech_params_dir_overrides_the_bundled_defaults(
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
-    assert "flow_cap_max: 42.0" in output.read_text(encoding="utf-8")
+    text = output.read_text(encoding="utf-8")
+    assert "flow_cap_max:" in text and "data: 42.0" in text
 
 
 def test_conversion_tech_params_dir_handles_a_utf8_bom(tmp_path: Path) -> None:

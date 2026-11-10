@@ -23,12 +23,41 @@ def test_modern_export_uses_conversion_and_flow_naming() -> None:
     assert body["carrier_in"] == "natural_gas"
     assert set(body["carrier_out"]) == {"electricity", "heat"}
     assert body["flow_out_eff"]["dims"] == "carriers"
-    assert body["cost_flow_cap"]["index"] == "monetary"
+    # capacity-linked values are per kW of the PRIMARY OUTPUT carrier only
+    assert body["cost_flow_cap"]["index"] == [["monetary", "electricity"]]
+    assert body["cost_flow_cap"]["dims"] == ["costs", "carriers"]
+    assert body["flow_cap_max"] == {
+        "data": tech.flow_cap_max,
+        "index": "electricity",
+        "dims": "carriers",
+    }
     assert "cost_flow_in" not in body  # fuel is priced by the supply tech
     assert body["cost_interest_rate"]["data"] == pytest.approx(
         tech.params["cost_interest_rate"]
     )
     assert body["flow_ramping"] == pytest.approx(tech.params["flow_ramping"])
+
+
+def test_capacity_parameters_never_apply_to_input_carriers() -> None:
+    """Regression: Calliope 0.7 applies flow_cap_max, cost_flow_cap and
+    cost_om_annual to every carrier's flow_cap (inputs included). Scalar
+    values capped a pellet boiler at 15 kW of *pellets* (12.6 kW heat) and
+    charged investment/O&M on input and output capacity alike."""
+    for tech_id in (
+        "boiler_biomass_household",
+        "heat_pump_electric_household",
+        "chiller_absorption_community",
+        "chp_biomass_community",
+    ):
+        tech = get_technology(tech_id)
+        body = modern.export(tech)
+        out = tech.primary_carrier_out
+        assert body["flow_cap_max"]["index"] == out
+        assert body["cost_flow_cap"]["index"] == [["monetary", out]]
+        if "cost_om_annual" in body:
+            assert body["cost_om_annual"]["index"] == [["monetary", out]]
+        for carrier in tech.carriers_in:
+            assert carrier != out
 
 
 def test_modern_export_passes_through_an_unknown_params_key_unchanged() -> None:

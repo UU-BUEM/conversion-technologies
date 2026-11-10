@@ -102,43 +102,41 @@ def _energy_prices() -> dict[str, float]:
         }
 
 
+def _cap(tech_body: dict) -> float:
+    """A tech's ``flow_cap_max`` in kW of its primary output carrier.
+
+    The export indexes it on that carrier (``{data, index, dims: carriers}``),
+    because Calliope 0.7 would otherwise apply a scalar ceiling to every
+    carrier -- inputs included -- capping e.g. a 15 kW pellet boiler at
+    15 kW of *pellets* (12.6 kW heat). See the repo's
+    docs/calliope_schema_mapping.md "Capacity is per carrier".
+    """
+    cap = tech_body["flow_cap_max"]
+    return float(cap["data"]) if isinstance(cap, dict) else float(cap)
+
+
 def _household_heat_cap_total() -> float:
-    """Combined flow_cap_max of the household-scale heat-producing techs.
+    """Combined max heat output of the household-scale heat-producing techs.
 
     Read from this scenario's own real techs export, not hardcoded, so it
     always matches whatever technologies.csv/costs.csv currently say.
     """
     techs = _yaml.load(_TECHS_EXPORT_PATH.open(encoding="utf-8"))["techs"]
-    return sum(techs[tech_id]["flow_cap_max"] for tech_id in _HOUSEHOLD_TECH_IDS)
+    return sum(_cap(techs[tech_id]) for tech_id in _HOUSEHOLD_TECH_IDS)
 
 
 def _household_cool_cap_total() -> float:
-    """Combined *true* max cooling output of the household-scale chiller techs.
+    """Combined max cooling output of the household-scale chiller techs.
 
-    Not just `sum(flow_cap_max)` -- confirmed against Calliope 0.7.0's own
-    base math (`flow_out_max`/`flow_in_max` in `calliope/math/base.yaml`):
-    `flow_cap_max` directly bounds flow_out (no efficiency multiplier,
-    `flow_out <= flow_cap * flow_out_parasitic_eff`), so a COP >= 1 tech's
-    (electric/reversible chiller) real max cooling output is `flow_cap_max`
-    itself, not `flow_cap_max * cop`. But a COP < 1 tech (absorption, which
-    runs off `heat`, not `electricity`) is tighter the other way: its
-    primary carrier is `heat`, capped at `flow_cap_max` by `flow_in_max`,
-    and the carrier-ratio balance (`ratio_math.py`) ties
-    `flow_out[cooling] == cop * flow_in[heat]`, so its real max cooling
-    output is `flow_cap_max * cop` (cop=0.65 here -- noticeably less than
-    the 8 kW nameplate). Missing this is what made the original naive
-    `sum(flow_cap_max)` margin (24 kW) let through nodes whose real combined
-    max (21.2 kW: 8 + 8 + 8*0.65) was actually *below* their own peak demand
-    -- 26 real Calliope infeasibilities traced to exactly this gap on a
-    full 1,260-building run. General rule, read from each tech's own
-    `flow_out_eff` (its COP, scalar for every chiller variant -- one output
-    carrier each) rather than re-deriving it: `flow_cap_max * min(1, cop)`.
+    With ``flow_cap_max`` indexed on each chiller's primary output carrier
+    (cooling), it bounds cooling output directly for every variant, so the
+    combined ceiling is a plain sum. (Before 2026-11-10 the ceiling was a
+    scalar that also bound an absorption chiller's *heat input*, which made
+    its real cooling ceiling ``flow_cap_max * cop`` -- see
+    .claude/chiller/resolved.md "cool-cap-margin-fix", now superseded.)
     """
     techs = _yaml.load(_TECHS_EXPORT_PATH.open(encoding="utf-8"))["techs"]
-    return sum(
-        techs[tech_id]["flow_cap_max"] * min(1.0, techs[tech_id]["flow_out_eff"])
-        for tech_id in _HOUSEHOLD_CHILLER_TECH_IDS
-    )
+    return sum(_cap(techs[tech_id]) for tech_id in _HOUSEHOLD_CHILLER_TECH_IDS)
 
 
 def build(hourly_parquet: Path, out_dir: Path) -> None:

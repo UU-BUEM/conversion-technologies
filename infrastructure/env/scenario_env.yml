@@ -21,23 +21,18 @@
 # Create:  conda env create -f infrastructure/env/scenario_env.yml
 # Update:  conda env update -f infrastructure/env/scenario_env.yml --prune
 #
-# calliope's own version is deliberately NOT pinned here. Current best
-# answer: an EnerPlanET developer confirmed (2026-10-28) production
-# targets Calliope 0.7.0 -- but that conflicts with
-# enerplanet/simulation-engine's own committed webservice.dockerfile,
-# which pins calliope==0.6.10 (see scenarios/NL/loenen_gas_free/docs/
-# phase4b_solve_0610_sizing.md's status note) -- not yet reconciled.
-# Pin `calliope==0.7.0` in the scenario's own docs/run script as the
-# working target for now, same as phase4_solve.md's
-# `.venv_calliope_check/` already does, but do it there -- not here, so
-# a future scenario targeting a different system isn't blocked by this
-# file, and revisit this pin once the 0.6.10/0.7.0 conflict is resolved.
+# Calliope version: calliope==0.7.0, decided (EnerPlanET developers have
+# confirmed it repeatedly; closed 2026-11-10). The 0.6.10 pin in
+# enerplanet/simulation-engine's webservice.dockerfile is stale, and
+# scenarios/NL/loenen_gas_free/docs/phase4b_solve_0610_sizing.md is
+# historical background only. The exporter's flow_*/conversion schema and
+# its carrier-indexed capacity/cost fields target 0.7.0 specifically.
 name: scenario_env
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11
+  - python=3.12 # calliope==0.7.0 requires Python >=3.12 (PyPI Requires-Python; 3.11 fails to resolve)
   - pandas
   - numpy
   - pyarrow
@@ -46,5 +41,5 @@ dependencies:
   - pip
   - pip:
       - ruamel.yaml>=0.18,<1 # same comment-preserving YAML writer conversion_env.yml uses
-      - calliope==0.7.0 # working target per note above -- not yet fully reconciled against simulation-engine's own 0.6.10 pin
+      - calliope==0.7.0 # decided target version (see note above)
       - highspy # faster solver than CBC where a compatible pyomo/calliope pairing is confirmed -- see phase4b_solve_0610_sizing.md Finding 5 and the "0.7.0 + HiGHS" caveat in this scenario's docs

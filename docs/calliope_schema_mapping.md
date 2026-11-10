@@ -77,6 +77,35 @@ investment instead of currency/kW/year) and `cost_depreciation_rate` (an
 alternative to interest-rate-based annuity) -- both real Calliope
 parameters, add as new columns if a project needs them.
 
+## Capacity is per carrier
+
+Calliope 0.7 creates one `flow_cap` decision variable **per carrier** of a
+technology -- inputs included -- and its base math applies capacity
+parameters to each of them: `flow_cap_max`/`flow_cap_min` bound every
+carrier's `flow_cap`, `cost_investment_flow_cap` is computed `foreach
+carriers`, and `cost_operation_fixed` is `sum(cost_om_annual * flow_cap,
+over=carriers)`. Written as plain scalars (as this exporter did until
+2026-11-10), a pellet boiler's `flow_cap_max: 15` therefore capped its
+*pellet input* at 15 kW (so heat at 15 x 0.84 = 12.6 kW), and investment and
+fixed O&M were charged on the input capacity as well as the output
+capacity -- roughly doubling the capital cost of every conversion
+technology.
+
+`modern.py` now indexes `flow_cap_max`, `flow_cap_min`, `cost_flow_cap` and
+`cost_om_annual` on the technology's **primary output carrier**, the same
+shape Calliope's own `urban_scale` example uses:
+
+```yaml
+flow_cap_max: {data: 15.0, index: heat, dims: carriers}
+cost_flow_cap: {data: 542.7, index: [[monetary, heat]], dims: [costs, carriers]}
+```
+
+Input-carrier capacities are then unbounded and cost-free, so they simply
+follow the flows. Every catalogue value is per kW of primary output
+(`docs/parameter_sources.md`), so this is the shape that makes the numbers
+mean what they say. Regression test:
+`tests/test_calliope_export.py::test_capacity_parameters_never_apply_to_input_carriers`.
+
 ## Heat pump efficiency
 
 `technologies.csv`'s `efficiency` column is shared between boiler (plain
@@ -146,16 +175,26 @@ constraints:
     where: carrier_flow_ratio_in
     equations:
       - where: "[heat_pump_electric_household] in techs"
-        expression: flow_in[carriers=ambient_heat] == flow_in[carriers=electricity] * carrier_flow_ratio_in
-  balance_conversion:  # REPLACES the base constraint -> must keep it for every other tech
-    where: base_tech==conversion AND NOT include_storage==true AND NOT [heat_pump_electric_household] in techs
+        expression: >-
+          flow_in[carriers=ambient_heat]
+          == flow_in[carriers=electricity] * carrier_flow_ratio_in
+  balance_conversion:  # REPLACES the base constraint -> keep it for every other tech
+    where: >-
+      base_tech==conversion AND NOT include_storage==true
+      AND NOT [heat_pump_electric_household] in techs
     equations:
-      - expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+      - expression: >-
+          sum(flow_out_inc_eff, over=carriers)
+          == sum(flow_in_inc_eff, over=carriers)
   balance_conversion_primary_carriers:
-    where: base_tech==conversion AND NOT include_storage==true AND [heat_pump_electric_household] in techs
+    where: >-
+      base_tech==conversion AND NOT include_storage==true
+      AND [heat_pump_electric_household] in techs
     equations:
       - where: "[heat_pump_electric_household] in techs"
-        expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
+        expression: >-
+          flow_out_inc_eff[carriers=heat]
+          == flow_in_inc_eff[carriers=electricity]
 ```
 
 **A constraint in a math file that has the same name as a base-math
@@ -226,8 +265,8 @@ numeric *solve* (`m.solve()`) — blocked in that same pass by an unrelated
 Pyomo/HiGHS solver-backend compatibility bug in the validation
 environment, not by anything in this package's generated YAML. Spot-check
 both the tech YAML and the accompanying `additional_math.yaml` against
-whatever Calliope version is actually pinned in the consuming model repo
-before relying on it for a real solve.
+`calliope==0.7.0` (the decided target) before relying on it for a real
+solve -- the Loenen scenario does exactly this.
 
 ## Weather-driven COP profiles (`new/heat_pump/weather_cop.py`)
 
@@ -333,8 +372,9 @@ when every value was replaced by a sourced one -- all sources publish in EUR):
 | Energy | kWh | `cost_flow_in`/`cost_flow_out`, any `data_tables` timeseries value |
 | Timestep | 1 hour | matches `weather`'s and `occupancy`'s native resolution exactly — `weather.get_point_weather()`'s own contract returns an hourly series, trusted rather than re-validated here (`weather-cop` is the one place a real timeseries enters this package) |
 
-**Calliope version**: this package's `flow_*`/`conversion` schema targets
-Calliope **0.7**, which **shipped as a full stable release** on PyPI as of
+**Calliope version**: this package targets **`calliope==0.7.0`** -- decided
+(EnerPlanET developers confirmed it repeatedly; `.claude/resolved.md`
+"calliope-0.7.0-decided"). 0.7 **shipped as a full stable release** on PyPI as of
 2026-10-23 (`pip install calliope==0.7.0` — confirmed working, see
 `scenarios/NL/loenen_gas_free/docs/phase4_solve.md`). This updates earlier
 guidance here that named `0.7.0.dev8`/`dev7` as the latest available —
@@ -380,20 +420,9 @@ entry for it with no new code (see "Carrier ratio math" above). `electric`
 and `heat_pump_reversible` have one carrier per side, like `boiler`, so need
 no custom math.
 
-A real pitfall confirmed against an actual Calliope 0.7.0 solve (not just
-algebra): `flow_cap_max` bounds `flow_out` *directly* (`flow_out_max` in
-Calliope's own `calliope/math/base.yaml` has no efficiency term), so a
-COP >= 1 technology's (electric AC, `heat_pump_reversible`) real max output
-is its nameplate `flow_cap_max`, while a COP < 1 technology's (`absorption`)
-real max output is `flow_cap_max * cop` -- *less* than nameplate, since its
-primary carrier is `heat`, not `cooling`, and that's what `flow_cap` caps.
-Whoever sizes combined capacity across several chiller variants (as
-`scenarios/NL/loenen_gas_free/scripts/build_nodes.py` does, to decide which
-nodes need building-scale fallback) must sum `flow_cap_max * min(1, cop)`
-per tech, not a bare `sum(flow_cap_max)` -- the bare sum overcounts exactly
-by absorption's shortfall, which produced 26 real Calliope infeasibilities
-on a full 1,260-building run before the fix (see
-`.claude/chiller/resolved.md` "cool-cap-margin-fix").
+Capacity ceilings and capacity costs apply to the primary output carrier
+(cooling) for every chiller variant -- see "Capacity is per carrier" above
+-- so a combined household ceiling is a plain sum of `flow_cap_max`.
 
 Out of scope here (see `.claude/chiller/open.md`): which real heat source
 feeds an `absorption` row (community waste heat, a CHP byproduct, etc.) is a

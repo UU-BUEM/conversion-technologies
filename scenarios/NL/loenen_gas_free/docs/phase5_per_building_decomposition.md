@@ -8,7 +8,8 @@
 > prices. Both are fixed (repo root `CHANGELOG.md`, `.claude/resolved.md`
 > "balance-conversion-base-branch"; `constraints.md` 8). The decomposition
 > argument itself (sections 1-6) is unaffected. Current results:
-> `outputs/v2_sourced/` (see `README.md`).
+> `outputs/v3/` (see `README.md`; `outputs/v2_sourced/` is also invalid --
+> capacity ceilings/costs applied to input carriers).
 
 ## Abstract
 

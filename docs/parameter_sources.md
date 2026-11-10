@@ -4,7 +4,8 @@ Every number in `src/conversion_technologies/new/technologies.csv` and
 `costs.csv` is traceable to a published source, or explicitly labelled as a
 modelling assumption. `tests/test_parameter_sources.py` enforces this:
 
-- every non-blank numeric cell has a row in [`sources/parameter_sources.csv`](sources/parameter_sources.csv);
+- every non-blank numeric cell has a row in
+  [`sources/parameter_sources.csv`](sources/parameter_sources.csv);
 - every such row matches the catalogue value exactly;
 - every row names a `source_id` listed in [`sources/references.csv`](sources/references.csv)
   (unless its `basis` is `assumption`), and says where in the source the value is;
@@ -102,12 +103,11 @@ scale or technology. Each row's `note` says why.
   constraints (the most of one technology a single node may install), not
   product ratings. The exception is the household heat pumps, which use the
   90th percentile of heat output of ISDE-eligible models on the RVO list:
-  air-to-water 19 kW, ground-source 29 kW. In Calliope 0.7 the ceiling
-  applies to **every carrier of the technology, inputs included**. A pellet
-  boiler with `flow_cap_max = 15` is therefore limited by its 15 kW pellet
-  input to 15 x 0.84 = 12.6 kW of heat. These ceilings visibly shape
-  results: in Loenen, heat pumps are only installed where the household
-  pellet boiler hits this limit.
+  air-to-water 19 kW, ground-source 29 kW. Every ceiling and every
+  capacity cost is per kW of the technology's **primary output**; the
+  exporter indexes them on that carrier because Calliope 0.7 would
+  otherwise apply them to input carriers too (see
+  `calliope_schema_mapping.md` "Capacity is per carrier").
 - **Heat pump design temperatures** (see above).
 - **Absorption chiller parasitic electricity** (`aux_electricity_ratio`,
   0.02-0.03): HRE includes pump work in its COP definition but gives no

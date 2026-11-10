@@ -1,7 +1,13 @@
 # Phase 4b — sizing probe against calliope==0.6.10 (separate from Phase 4)
 
-**Status: findings stand; the version question has a real contradiction,
-not yet reconciled.** An EnerPlanET developer confirmed (2026-10-28) that
+> **Historical (closed 2026-11-10).** EnerPlanET developers have confirmed
+> repeatedly that the target is `calliope==0.7.0`; this repository uses
+> 0.7.0 everywhere. The text below documents a 0.6.10 investigation and
+> is kept only as background.
+
+**Status (as written 2026-10-28): findings stand; the version question had
+a real contradiction, since resolved in favour of 0.7.0.** An EnerPlanET
+developer confirmed (2026-10-28) that
 production targets **Calliope 0.7.0**. That conflicts directly with this
 doc's own finding below -- `enerplanet/simulation-engine`'s actual,
 committed `webservice.dockerfile` pins `calliope==0.6.10`, not 0.7.0. One
