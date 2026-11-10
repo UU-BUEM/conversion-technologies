@@ -20,20 +20,20 @@ techs:
     carrier_out: electricity
     flow_cap_max: 1000000.0
     cost_flow_out:
-      data: 0.25
+      data: 0.26035
       index: monetary
       dims: costs
-    comment: Placeholder grid tariff (USD/kWh, this package's currency convention) -- not a real Dutch electricity price.
+    comment: EUR/kWh; Eurostat nrg_pc_204, NL household band DC, excl. taxes and levies, 2025 mean (energy_prices.csv).
   supply_biomass:
     base_tech: supply
     name: Biomass (wood pellet) fuel supply
     carrier_out: biomass
     flow_cap_max: 1000000.0
     cost_flow_out:
-      data: 0.05
+      data: 0.064034
       index: monetary
       dims: costs
-    comment: Placeholder pellet price (USD/kWh) -- not sourced from a real market quote.
+    comment: EUR/kWh; DEA SOEB25 consumer-level wood pellet factor price 2025, DKK->EUR (energy_prices.csv).
   supply_ambient_heat:
     base_tech: supply
     name: Free ambient (outdoor-air) heat source

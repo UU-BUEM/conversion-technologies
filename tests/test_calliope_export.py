@@ -24,8 +24,10 @@ def test_modern_export_uses_conversion_and_flow_naming() -> None:
     assert set(body["carrier_out"]) == {"electricity", "heat"}
     assert body["flow_out_eff"]["dims"] == "carriers"
     assert body["cost_flow_cap"]["index"] == "monetary"
-    assert body["cost_flow_in"]["data"] == pytest.approx(tech.params["cost_flow_in"])
-    assert body["cost_interest_rate"]["data"] == pytest.approx(0.10)
+    assert "cost_flow_in" not in body  # fuel is priced by the supply tech
+    assert body["cost_interest_rate"]["data"] == pytest.approx(
+        tech.params["cost_interest_rate"]
+    )
     assert body["flow_ramping"] == pytest.approx(tech.params["flow_ramping"])
 
 

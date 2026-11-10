@@ -39,8 +39,13 @@ _ROWS = [
 def _build(row: dict[str, Any]) -> TechnologySpec:
     tech_id = f"boiler_{row['variant']}_{row['scale']}"
 
+    # Efficiency is on a net (lower heating value) basis, as the Danish
+    # Energy Agency catalogues report it: condensing boilers and plants
+    # with flue-gas condensation recover latent heat and exceed 1.0 on that
+    # basis (DEA: 1.01 apartment gas boiler, 1.04 district gas boiler,
+    # 1.012 pellet heat-only plant). 1.10 is a sanity ceiling, not a limit.
     nameplate_efficiency = require_range(
-        row["efficiency"], 0.8, 0.99, name="efficiency", tech_id=tech_id
+        row["efficiency"], 0.8, 1.10, name="efficiency", tech_id=tech_id
     )
     require_scale_capacity(row["flow_cap_max"], row["scale"], tech_id=tech_id)
 

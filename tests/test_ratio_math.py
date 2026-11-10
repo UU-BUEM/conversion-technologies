@@ -48,7 +48,9 @@ def test_heat_pump_gets_an_input_side_link_and_a_balance_override() -> None:
     # only accepts metadata (default/title/description), so the actual
     # value can't live there. See carrier_flow_ratios()'s own docstring.
     expected_ratio = tech.carriers_in["ambient_heat"] / tech.carriers_in["electricity"]
-    assert carrier_flow_ratios(tech)["carrier_flow_ratio_in"] == pytest.approx(expected_ratio)
+    assert carrier_flow_ratios(tech)["carrier_flow_ratio_in"] == pytest.approx(
+        expected_ratio
+    )
 
     link_eqs = math["constraints"]["link_flow_in_carriers"]["equations"]
     assert any(
@@ -58,7 +60,9 @@ def test_heat_pump_gets_an_input_side_link_and_a_balance_override() -> None:
         for eq in link_eqs
     )
 
-    balance_eqs = math["constraints"]["balance_conversion"]["equations"]
+    balance_eqs = math["constraints"]["balance_conversion_primary_carriers"][
+        "equations"
+    ]
     assert any(
         eq["where"] == f"[{tech.id}] in techs"
         and "flow_out_inc_eff[carriers=heat]" in eq["expression"]
@@ -76,7 +80,9 @@ def test_chp_gets_an_output_side_link_and_a_balance_override() -> None:
     assert "carrier_flow_ratio_in" not in math["parameters"]
 
     expected_ratio = tech.carriers_out["heat"] / tech.carriers_out["electricity"]
-    assert carrier_flow_ratios(tech)["carrier_flow_ratio_out"] == pytest.approx(expected_ratio)
+    assert carrier_flow_ratios(tech)["carrier_flow_ratio_out"] == pytest.approx(
+        expected_ratio
+    )
 
     link_eqs = math["constraints"]["link_flow_out_carriers"]["equations"]
     assert any(
@@ -93,8 +99,38 @@ def test_mixed_export_only_lists_technologies_that_need_math() -> None:
     hp = get_technology("heat_pump_electric_household")
     math = build_ratio_math([boiler, hp])
     assert math is not None
-    balance_eqs = math["constraints"]["balance_conversion"]["equations"]
+    balance_eqs = math["constraints"]["balance_conversion_primary_carriers"][
+        "equations"
+    ]
     assert {eq["where"] for eq in balance_eqs} == {f"[{hp.id}] in techs"}
+
+
+def test_balance_override_keeps_the_base_balance_for_every_other_conversion_tech() -> (
+    None
+):
+    """Regression: overriding ``balance_conversion`` REPLACES Calliope's base
+    constraint. Without a branch that keeps the base summed balance for
+    single-carrier technologies, a boiler produces heat with zero fuel input
+    (found on a real calliope==0.7.0 solve of the Loenen scenario)."""
+    boiler = get_technology("boiler_electric_household")
+    hp = get_technology("heat_pump_electric_household")
+    math = build_ratio_math([boiler, hp])
+    assert math is not None
+    base = math["constraints"]["balance_conversion"]
+    # applies to every conversion tech except the multi-carrier ones ...
+    assert base["where"].startswith(
+        "base_tech==conversion AND NOT include_storage==true"
+    )
+    assert f"NOT [{hp.id}] in techs" in base["where"]
+    assert boiler.id not in base["where"]
+    # ... with Calliope's own base expression, verbatim
+    assert [eq["expression"] for eq in base["equations"]] == [
+        "sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)"
+    ]
+    # and the multi-carrier balance is scoped to exactly those techs
+    primary = math["constraints"]["balance_conversion_primary_carriers"]
+    assert primary["where"].endswith(f"[{hp.id}] in techs")
+    assert "NOT [" not in primary["where"]
 
 
 def test_every_registered_multi_carrier_technology_is_covered() -> None:
@@ -102,7 +138,10 @@ def test_every_registered_multi_carrier_technology_is_covered() -> None:
     math = build_ratio_math(techs)
     assert math is not None
     covered = {
-        eq["where"] for eq in math["constraints"]["balance_conversion"]["equations"]
+        eq["where"]
+        for eq in math["constraints"]["balance_conversion_primary_carriers"][
+            "equations"
+        ]
     }
     expected = {
         f"[{t.id}] in techs"

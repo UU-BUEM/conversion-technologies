@@ -59,7 +59,15 @@ guessed): every `cost_*` name below is a real, current Calliope parameter.
 | `cost_om_annual` | Fixed O&M cost | currency/kW/year | annual fixed O&M per unit installed capacity -- **note**: an earlier version of this column was misnamed `cost_flow_om_annual` (not a real Calliope key); renamed once the real name was confirmed |
 | `cost_flow_in` | Variable cost per unit *consumed* (e.g. fuel price) | currency/kWh in | "operating cost per unit of inflow" |
 | `cost_flow_out` | Variable cost per unit *produced* (e.g. output-linked maintenance) | currency/kWh out | "operating cost per unit of outflow" |
-| `cost_interest_rate` | Discount/interest rate for cost annualisation -- not a currency cost | fraction, e.g. `0.10` | "interest rate for annuity calculation" |
+| `cost_interest_rate` | Discount/interest rate for cost annualisation -- not a currency cost | fraction, e.g. `0.0225` | "interest rate for annuity calculation" |
+
+**Fuel is priced once, on the supply side.** The bundled `costs.csv` leaves
+`cost_flow_in` blank for every technology: a fuel or electricity price
+belongs on the model's *supply* technology for that carrier (a Calliope model
+always needs one), and repeating it on the conversion technology would charge
+it twice. `cost_flow_out` carries only output-linked variable O&M where the
+source gives one (DEA district-heating chapters). Every bundled value and
+its source: [`parameter_sources.md`](parameter_sources.md).
 
 `cost_flow_in` and `cost_flow_out` are kept as two distinct columns rather
 than merged into one "variable cost," because Calliope itself treats them
@@ -72,7 +80,8 @@ parameters, add as new columns if a project needs them.
 ## Heat pump efficiency
 
 `technologies.csv`'s `efficiency` column is shared between boiler (plain
-thermal efficiency, 0.8-0.99) and heat pump (the Carnot quality/2nd-law
+thermal efficiency on a net/LHV basis, 0.8-1.10 -- condensing units exceed
+1.0 on that basis) and heat pump (the Carnot quality/2nd-law
 factor, 0-1) -- one column name across the whole table rather than a
 heat-pump-only `carnot_efficiency`. For heat pumps this is **not** the COP;
 it is the input to `new/heat_pump/generic/cop_calculation.py`'s
@@ -138,20 +147,39 @@ constraints:
     equations:
       - where: "[heat_pump_electric_household] in techs"
         expression: flow_in[carriers=ambient_heat] == flow_in[carriers=electricity] * carrier_flow_ratio_in
-  balance_conversion:  # overrides the base equation, scoped per affected tech
-    where: base_tech==conversion AND NOT include_storage==true
+  balance_conversion:  # REPLACES the base constraint -> must keep it for every other tech
+    where: base_tech==conversion AND NOT include_storage==true AND NOT [heat_pump_electric_household] in techs
+    equations:
+      - expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+  balance_conversion_primary_carriers:
+    where: base_tech==conversion AND NOT include_storage==true AND [heat_pump_electric_household] in techs
     equations:
       - where: "[heat_pump_electric_household] in techs"
         expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
 ```
+
+**A constraint in a math file that has the same name as a base-math
+constraint replaces it; it does not narrow it.** Until 2026-11-09 the
+generated `balance_conversion` override listed only the multi-carrier
+technologies, which silently removed the conversion balance from every
+single-carrier conversion technology (all boilers, the electric and
+reversible chillers): they could deliver output with zero input. Found on a
+real `calliope==0.7.0` solve (a Loenen building whose boilers delivered
+34,583 kWh of heat while the grid and pellet supply technologies delivered
+none), fixed by keeping the base expression verbatim for every *other*
+conversion technology (the `NOT [...] in techs` branch above) and moving the
+primary-carrier balance into its own constraint. Regression test:
+`tests/test_ratio_math.py::test_balance_override_keeps_the_base_balance_for_every_other_conversion_tech`.
+Calliope's own urban-scale example keeps the same default branch.
 
 `carrier_flow_ratio_in`/`carrier_flow_ratio_out` are derived straight from
 the existing `carriers_in`/`carriers_out` ratios (`secondary / primary`) — no
 new CSV column. This mirrors the pattern Calliope's own team uses in their
 official CHP example
 (`calliope/src/calliope/example_models/urban_scale/additional_math.yaml`:
-`heat_to_power_ratio` + a `link_chp_outputs` equality constraint + the same
-kind of scoped `balance_conversion` override), generalised to work for the
+`heat_to_power_ratio` + a `link_chp_outputs` equality constraint + a
+`balance_conversion` override that keeps the default equation for every other
+technology), generalised to work for the
 input side too (heat pump) instead of only the output side (CHP).
 
 **Where each tech's actual ratio *value* lives — confirmed against a real
@@ -294,11 +322,13 @@ Calliope is explicitly unit/currency-agnostic ("no restrictions on the units
 used in model definitions... usually kW and kWh, alongside a currency like
 USD... the responsibility of the modeler to ensure consistency" — Calliope's
 own docs). This package's convention, used consistently and stated here
-once rather than left implicit:
+once rather than left implicit (changed from USD to EUR2025 on 2026-11-09,
+when every value was replaced by a sourced one -- all sources publish in EUR):
 
 | Quantity | Unit | Where |
 | --- | --- | --- |
-| Currency | USD | every `cost_*` column/parameter |
+| Currency | EUR, real 2025 prices, excluding VAT and other taxes | every `cost_*` column/parameter (converted from each source's price year with the euro-area HICP -- see [`parameter_sources.md`](parameter_sources.md)) |
+| Interest rate | real (inflation-corrected) | `cost_interest_rate` (Dutch social discount rate, 2.25 %) |
 | Power / capacity | kW | `flow_cap_max` and everything scaled against it |
 | Energy | kWh | `cost_flow_in`/`cost_flow_out`, any `data_tables` timeseries value |
 | Timestep | 1 hour | matches `weather`'s and `occupancy`'s native resolution exactly — `weather.get_point_weather()`'s own contract returns an hourly series, trusted rather than re-validated here (`weather-cop` is the one place a real timeseries enters this package) |
@@ -322,9 +352,9 @@ The `chiller` category adds three variants, all sharing one
 `specific/__init__.py` builder: `electric` (compression chiller / AC,
 electricity in, cooling out), `absorption` (heat in, plus a small parasitic
 electricity draw, cooling out), and `heat_pump_reversible` (electricity in,
-cooling out -- the same physical unit as `heat_pump` in cooling mode, kept
-as its own catalog row with its own, lower COP and higher cost rather than
-sharing capacity with a `heat_pump` row; it is **not** a literal dual-mode
+cooling out -- a reversible unit in cooling mode, kept as its own catalog
+row with its own sourced cost and COP rather than sharing capacity with a
+`heat_pump` row; it is **not** a literal dual-mode
 technology with shared installed capacity, since Calliope's
 alternative/either-or carrier support (`carrier_tiers`/`carrier_ratios`) is
 removed in current Calliope and not modeled here anyway -- see root
@@ -336,8 +366,11 @@ formula here (cooling-mode delta-T isn't modeled), so a formula would be
 inventing precision the category doesn't have. Per-variant sanity bounds are
 enforced in `chiller/specific/__init__.py`: `electric` and
 `heat_pump_reversible` are electricity-driven vapor-compression cycles (COP
-> 1 by definition, bounded 2-8 and 1.5-5 respectively); `absorption` is
-heat-driven (COP < 1 by definition, bounded 0.4-1.3).
+> 1 by definition, bounded 2-8 and 1.5-8 respectively); `absorption` is
+heat-driven (COP < 1 by definition, bounded 0.4-1.3). The bundled `cop`
+values are *in-situ seasonal* COPs: Heat Roadmap Europe's standard SEER of
+units sold in 2025, times 0.7 (HRE D3.2 §4.4: real installations reach
+60-80 % of the standard SEER) -- see [`parameter_sources.md`](parameter_sources.md).
 
 `absorption`'s two input carriers (`heat` + a small `electricity` ratio via
 `aux_electricity_ratio`) are structurally identical to `heat_pump`'s

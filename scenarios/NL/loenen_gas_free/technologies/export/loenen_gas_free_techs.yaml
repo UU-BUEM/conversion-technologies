@@ -8,17 +8,17 @@ techs:
     flow_in_eff: 1.0
     flow_out_eff: 0.87
     flow_cap_max: 100.0
-    lifetime: 20
+    lifetime: 25
     cost_flow_cap:
-      data: 350.0
+      data: 306.8
       index: monetary
       dims: costs
-    cost_flow_in:
-      data: 0.035
+    cost_om_annual:
+      data: 5.33
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
     comment: Nameplate efficiency 87%.
@@ -29,22 +29,26 @@ techs:
     carrier_in: biomass
     carrier_out: heat
     flow_in_eff: 1.0
-    flow_out_eff: 0.88
+    flow_out_eff: 1.0117
     flow_cap_max: 2000.0
-    lifetime: 22
+    lifetime: 25
     cost_flow_cap:
-      data: 300.0
+      data: 886.3
       index: monetary
       dims: costs
-    cost_flow_in:
-      data: 0.035
+    cost_om_annual:
+      data: 40.405
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: 0.003415
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: Nameplate efficiency 88%.
+    comment: Nameplate efficiency 101%.
   boiler_biomass_household:
     base_tech: conversion
     name: Biomass (wood pellet) boiler (household)
@@ -52,22 +56,22 @@ techs:
     carrier_in: biomass
     carrier_out: heat
     flow_in_eff: 1.0
-    flow_out_eff: 0.85
+    flow_out_eff: 0.84
     flow_cap_max: 15.0
     lifetime: 20
     cost_flow_cap:
-      data: 400.0
+      data: 542.7
       index: monetary
       dims: costs
-    cost_flow_in:
-      data: 0.035
+    cost_om_annual:
+      data: 42.06
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: Nameplate efficiency 85%.
+    comment: Nameplate efficiency 84%.
   boiler_electric_building:
     base_tech: conversion
     name: Electric resistance boiler (building)
@@ -77,13 +81,17 @@ techs:
     flow_in_eff: 1.0
     flow_out_eff: 0.99
     flow_cap_max: 60.0
-    lifetime: 20
+    lifetime: 25
     cost_flow_cap:
-      data: 120.0
+      data: 92.0
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 1.56
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
     comment: Nameplate efficiency 99%.
@@ -98,11 +106,19 @@ techs:
     flow_cap_max: 500.0
     lifetime: 20
     cost_flow_cap:
-      data: 100.0
+      data: 154.6
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 1.138
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: 0.00095
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
     comment: Nameplate efficiency 99%.
@@ -115,52 +131,20 @@ techs:
     flow_in_eff: 1.0
     flow_out_eff: 0.99
     flow_cap_max: 12.0
-    lifetime: 20
+    lifetime: 25
     cost_flow_cap:
-      data: 150.0
+      data: 289.6
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 5.0
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
     comment: Nameplate efficiency 99%.
-  chiller_absorption_building:
-    base_tech: conversion
-    name: Absorption chiller (building)
-    color: '#9B6AA3'
-    carrier_in:
-      - heat
-      - electricity
-    carrier_out: cooling
-    flow_in_eff:
-      data:
-        - 1.0
-        - 0.03
-      index:
-        - heat
-        - electricity
-      dims: carriers
-    flow_out_eff: 0.7
-    carrier_flow_ratio_in: 0.03
-    flow_cap_max: 70.0
-    lifetime: 22
-    cost_flow_cap:
-      data: 900.0
-      index: monetary
-      dims: costs
-    cost_flow_in:
-      data: 0.03
-      index: monetary
-      dims: costs
-    cost_interest_rate:
-      data: 0.1
-      index: monetary
-      dims: costs
-    comment: COP=0.70. Multi-carrier flows share one internal capacity variable; per-carrier 
-      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
-      alternative/either-or carriers would need hand-written user-defined math 
-      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
   chiller_absorption_community:
     base_tech: conversion
     name: Absorption chiller (community)
@@ -177,59 +161,23 @@ techs:
         - heat
         - electricity
       dims: carriers
-    flow_out_eff: 0.75
+    flow_out_eff: 0.7
     carrier_flow_ratio_in: 0.02
     flow_cap_max: 1200.0
     lifetime: 25
     cost_flow_cap:
-      data: 700.0
+      data: 218.9
       index: monetary
       dims: costs
-    cost_flow_in:
-      data: 0.03
-      index: monetary
-      dims: costs
-    cost_interest_rate:
-      data: 0.1
-      index: monetary
-      dims: costs
-    comment: COP=0.75. Multi-carrier flows share one internal capacity variable; per-carrier 
-      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
-      alternative/either-or carriers would need hand-written user-defined math 
-      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
-  chiller_absorption_household:
-    base_tech: conversion
-    name: Absorption chiller (household)
-    color: '#9B6AA3'
-    carrier_in:
-      - heat
-      - electricity
-    carrier_out: cooling
-    flow_in_eff:
-      data:
-        - 1.0
-        - 0.03
-      index:
-        - heat
-        - electricity
-      dims: carriers
-    flow_out_eff: 0.65
-    carrier_flow_ratio_in: 0.03
-    flow_cap_max: 8.0
-    lifetime: 20
-    cost_flow_cap:
-      data: 1200.0
-      index: monetary
-      dims: costs
-    cost_flow_in:
-      data: 0.03
+    cost_om_annual:
+      data: 8.76
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=0.65. Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: COP=0.70. Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
@@ -240,18 +188,22 @@ techs:
     carrier_in: electricity
     carrier_out: cooling
     flow_in_eff: 1.0
-    flow_out_eff: 3.5
+    flow_out_eff: 3.08
     flow_cap_max: 60.0
-    lifetime: 18
+    lifetime: 15
     cost_flow_cap:
-      data: 400.0
+      data: 360.5
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 14.42
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=3.50.
+    comment: COP=3.08.
   chiller_electric_community:
     base_tech: conversion
     name: Electric air conditioner (compression chiller) (community)
@@ -259,18 +211,22 @@ techs:
     carrier_in: electricity
     carrier_out: cooling
     flow_in_eff: 1.0
-    flow_out_eff: 4.0
+    flow_out_eff: 3.36
     flow_cap_max: 1000.0
     lifetime: 20
     cost_flow_cap:
-      data: 300.0
+      data: 265.2
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 10.61
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=4.00.
+    comment: COP=3.36.
   chiller_electric_household:
     base_tech: conversion
     name: Electric air conditioner (compression chiller) (household)
@@ -278,18 +234,22 @@ techs:
     carrier_in: electricity
     carrier_out: cooling
     flow_in_eff: 1.0
-    flow_out_eff: 3.2
+    flow_out_eff: 5.04
     flow_cap_max: 8.0
-    lifetime: 15
+    lifetime: 12
     cost_flow_cap:
-      data: 500.0
+      data: 473.2
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 18.95
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=3.20.
+    comment: COP=5.04.
   chiller_heat_pump_reversible_building:
     base_tech: conversion
     name: Reversible (heating/cooling) electric heat pump (building)
@@ -297,18 +257,22 @@ techs:
     carrier_in: electricity
     carrier_out: cooling
     flow_in_eff: 1.0
-    flow_out_eff: 3.0
+    flow_out_eff: 3.815
     flow_cap_max: 60.0
-    lifetime: 18
+    lifetime: 15
     cost_flow_cap:
-      data: 900.0
+      data: 1103.5
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 44.14
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=3.00.
+    comment: COP=3.81.
   chiller_heat_pump_reversible_community:
     base_tech: conversion
     name: Reversible (heating/cooling) electric heat pump (community)
@@ -316,18 +280,22 @@ techs:
     carrier_in: electricity
     carrier_out: cooling
     flow_in_eff: 1.0
-    flow_out_eff: 3.2
+    flow_out_eff: 3.36
     flow_cap_max: 1000.0
     lifetime: 20
     cost_flow_cap:
-      data: 700.0
+      data: 265.2
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 10.61
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=3.20.
+    comment: COP=3.36.
   chiller_heat_pump_reversible_household:
     base_tech: conversion
     name: Reversible (heating/cooling) electric heat pump (household)
@@ -335,56 +303,22 @@ techs:
     carrier_in: electricity
     carrier_out: cooling
     flow_in_eff: 1.0
-    flow_out_eff: 2.8
+    flow_out_eff: 5.04
     flow_cap_max: 8.0
-    lifetime: 18
+    lifetime: 14
     cost_flow_cap:
-      data: 1100.0
+      data: 367.3
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 16.0
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=2.80.
-  chp_biomass_building:
-    base_tech: conversion
-    name: Biomass combined heat and power (building)
-    color: '#5B7A3A'
-    carrier_in: biomass
-    carrier_out:
-      - electricity
-      - heat
-    flow_in_eff: 1.0
-    flow_out_eff:
-      data:
-        - 0.2286
-        - 0.5714
-      index:
-        - electricity
-        - heat
-      dims: carriers
-    carrier_flow_ratio_out: 2.499562554680665
-    flow_cap_max: 80.0
-    lifetime: 18
-    cost_flow_cap:
-      data: 3000.0
-      index: monetary
-      dims: costs
-    flow_ramping: 0.3
-    cost_flow_in:
-      data: 0.035
-      index: monetary
-      dims: costs
-    cost_interest_rate:
-      data: 0.1
-      index: monetary
-      dims: costs
-    comment: Energy-hub dispatch factors alpha=0.23 (electrical), beta=0.57 (thermal); power:heat 
-      ratio 0.40. Multi-carrier flows share one internal capacity variable; per-carrier 
-      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
-      alternative/either-or carriers would need hand-written user-defined math 
-      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+    comment: COP=5.04.
   chp_biomass_community:
     base_tech: conversion
     name: Biomass combined heat and power (community)
@@ -396,68 +330,30 @@ techs:
     flow_in_eff: 1.0
     flow_out_eff:
       data:
-        - 0.2545
-        - 0.5655
+        - 0.1468
+        - 0.8416
       index:
         - electricity
         - heat
       dims: carriers
-    carrier_flow_ratio_out: 2.2220039292730847
+    carrier_flow_ratio_out: 5.732970027247956
     flow_cap_max: 1500.0
-    lifetime: 20
+    lifetime: 25
     cost_flow_cap:
-      data: 2200.0
+      data: 7494.4
       index: monetary
       dims: costs
-    flow_ramping: 0.3
-    cost_flow_in:
-      data: 0.035
+    flow_ramping: 1.0
+    cost_om_annual:
+      data: 340.182
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: Energy-hub dispatch factors alpha=0.25 (electrical), beta=0.57 (thermal); power:heat 
-      ratio 0.45. Multi-carrier flows share one internal capacity variable; per-carrier 
-      flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
-      alternative/either-or carriers would need hand-written user-defined math 
-      (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
-  chp_biomass_household:
-    base_tech: conversion
-    name: Biomass combined heat and power (household)
-    color: '#5B7A3A'
-    carrier_in: biomass
-    carrier_out:
-      - electricity
-      - heat
-    flow_in_eff: 1.0
-    flow_out_eff:
-      data:
-        - 0.2074
-        - 0.5926
-      index:
-        - electricity
-        - heat
-      dims: carriers
-    carrier_flow_ratio_out: 2.857280617164899
-    flow_cap_max: 5.0
-    lifetime: 15
-    cost_flow_cap:
-      data: 4500.0
-      index: monetary
-      dims: costs
-    flow_ramping: 0.3
-    cost_flow_in:
-      data: 0.035
-      index: monetary
-      dims: costs
-    cost_interest_rate:
-      data: 0.1
-      index: monetary
-      dims: costs
-    comment: Energy-hub dispatch factors alpha=0.21 (electrical), beta=0.59 (thermal); power:heat 
-      ratio 0.35. Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: Energy-hub dispatch factors alpha=0.15 (electrical), beta=0.84 (thermal); power:heat 
+      ratio 0.17. Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
@@ -472,25 +368,29 @@ techs:
     flow_in_eff:
       data:
         - 1.0
-        - 2.329476744186046
+        - 1.9891302325581397
       index:
         - electricity
         - ambient_heat
       dims: carriers
-    flow_out_eff: 3.329476744186046
-    carrier_flow_ratio_in: 2.329476744186046
+    flow_out_eff: 2.9891302325581397
+    carrier_flow_ratio_in: 1.9891302325581397
     flow_cap_max: 80.0
-    lifetime: 18
+    lifetime: 20
     cost_flow_cap:
-      data: 750.0
+      data: 976.1
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 11.42
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=3.33 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
-      efficiency=0.45). Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: COP=2.99 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.404). Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
@@ -505,25 +405,33 @@ techs:
     flow_in_eff:
       data:
         - 1.0
-        - 2.551441860465116
+        - 1.7501477906976741
       index:
         - electricity
         - ambient_heat
       dims: carriers
-    flow_out_eff: 3.551441860465116
-    carrier_flow_ratio_in: 2.551441860465116
+    flow_out_eff: 2.750147790697674
+    carrier_flow_ratio_in: 1.7501477906976741
     flow_cap_max: 1500.0
-    lifetime: 20
+    lifetime: 25
     cost_flow_cap:
-      data: 600.0
+      data: 1150.0
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 2.127
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: 0.00086
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=3.55 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
-      efficiency=0.48). Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: COP=2.75 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.3717). Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
@@ -538,25 +446,29 @@ techs:
     flow_in_eff:
       data:
         - 1.0
-        - 2.329476744186046
+        - 2.299881395348837
       index:
         - electricity
         - ambient_heat
       dims: carriers
-    flow_out_eff: 3.329476744186046
-    carrier_flow_ratio_in: 2.329476744186046
-    flow_cap_max: 10.0
-    lifetime: 18
+    flow_out_eff: 3.299881395348837
+    carrier_flow_ratio_in: 2.299881395348837
+    flow_cap_max: 19.0
+    lifetime: 20
     cost_flow_cap:
-      data: 900.0
+      data: 1838.4
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 50.0
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=3.33 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
-      efficiency=0.45). Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: COP=3.30 at design conditions (source=2.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.446). Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
@@ -571,25 +483,29 @@ techs:
     flow_in_eff:
       data:
         - 1.0
-        - 3.545
+        - 2.2996699999999994
       index:
         - electricity
         - ground_heat
       dims: carriers
-    flow_out_eff: 4.545
-    carrier_flow_ratio_in: 3.545
+    flow_out_eff: 3.2996699999999994
+    carrier_flow_ratio_in: 2.2996699999999994
     flow_cap_max: 100.0
-    lifetime: 25
+    lifetime: 22
     cost_flow_cap:
-      data: 1500.0
+      data: 1220.1
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 6.92
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=4.54 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
-      efficiency=0.5). Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: COP=3.30 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.363). Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
@@ -604,25 +520,33 @@ techs:
     flow_in_eff:
       data:
         - 1.0
-        - 3.7268
+        - 2.09969
       index:
         - electricity
         - ground_heat
       dims: carriers
-    flow_out_eff: 4.7268
-    carrier_flow_ratio_in: 3.7268
+    flow_out_eff: 3.09969
+    carrier_flow_ratio_in: 2.09969
     flow_cap_max: 2000.0
-    lifetime: 30
+    lifetime: 25
     cost_flow_cap:
-      data: 1200.0
+      data: 1130.0
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 2.127
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: 0.00307
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=4.73 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
-      efficiency=0.52). Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: COP=3.10 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.341). Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
@@ -637,25 +561,29 @@ techs:
     flow_in_eff:
       data:
         - 1.0
-        - 3.545
+        - 2.549645
       index:
         - electricity
         - ground_heat
       dims: carriers
-    flow_out_eff: 4.545
-    carrier_flow_ratio_in: 3.545
-    flow_cap_max: 10.0
-    lifetime: 25
+    flow_out_eff: 3.549645
+    carrier_flow_ratio_in: 2.549645
+    flow_cap_max: 29.0
+    lifetime: 22
     cost_flow_cap:
-      data: 1800.0
+      data: 2328.6
+      index: monetary
+      dims: costs
+    cost_om_annual:
+      data: 50.0
       index: monetary
       dims: costs
     cost_interest_rate:
-      data: 0.1
+      data: 0.0225
       index: monetary
       dims: costs
-    comment: COP=4.54 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
-      efficiency=0.5). Multi-carrier flows share one internal capacity variable; per-carrier 
+    comment: COP=3.55 at design conditions (source=10.0C, sink=45.0C, quality/Carnot 
+      efficiency=0.3905). Multi-carrier flows share one internal capacity variable; per-carrier 
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).

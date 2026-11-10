@@ -1,6 +1,9 @@
 # Scenario: Loenen gas-free neighborhood
 
-**Status: scaffold — data pipeline and model assembly not yet implemented.**
+**Status: full pipeline runs end to end** (demand -> nodes -> per-building
+solves -> summary). Current results: `outputs/v2_sourced/` (sourced prices,
+26 degC cooling setpoint, fixed conversion balance); everything earlier is
+superseded -- see `docs/phase5_per_building_decomposition.md`'s note.
 This folder exists so the scenario has a home while it's small; split into its
 own repo once it outgrows living alongside `conversion-technologies`' own
 package code (tracked as an open decision, not yet taken).
@@ -22,12 +25,13 @@ add. See `constraints.md` for the exact constraint set.
 | Input | Source | Status |
 | --- | --- | --- |
 | Building geometry, TABULA archetype | `buem`'s `src/buem/data/buildings/netherlands/Loenen/` | Already checked in |
-| Per-building hourly heat demand | `buem`'s batch runner (`python -m buem.analysis.batch --data-dir .../Loenen ...`) | Not yet run for Loenen (only `heeten.parquet` exists in `buem/results/` today) |
+| Per-building hourly heat demand | `buem`'s `scripts/run_region_hourly.py`, via `scripts/run_demand_with_cooling_setpoint.py` (cooling setpoint 26 degC instead of buem's 21 degC default; `constraints.md` 10) | `data/loenen_single_dwelling_hourly_cool26.parquet` (1,260 buildings x 8,760 h). Cooling demand is still high (median 10.5 MWh/yr, peak 16 kW per dwelling) -- buem likely lacks summer ventilative cooling; treat cooling results as indicative |
+| Energy prices | `energy_prices.csv` (Eurostat electricity excl. taxes; Danish Energy Agency pellet factor price) | Sourced, system perspective (`constraints.md` 8) |
 | Per-household electricity/occupancy profile | `occupancy` (via `buem`'s `AttributeBuilder`, or called standalone) | `buem` already depends on it; standalone per-building export not yet scripted |
 | Weather (Loenen point) | `weather`, provider `merra-2` (default) or `era5-land` (needs the documented Jan-2018 boundary patch — see `buem`'s CLAUDE.md "Independent validation folder") | Available |
 | Conversion technology YAML + carrier-ratio math | *this repo*, `calliope_export.modern`/`ratio_math`, scoped to the non-gas `technology_ids` this scenario selects | This repo already does this; scenario-level filtering is new (see below) |
 | Per-node technology placement + demand wiring + Calliope `nodes:`/`locations:` | **New — this scenario's own job.** `modern.py` deliberately emits only `techs:` bodies, no `nodes:` concept (see `docs/calliope_schema_mapping.md` "occupancy is out of scope" / weather-cop's `nodes` note) | Done for 1,260 nodes — `scripts/build_nodes.py`, see `docs/phase3_nodes.md` |
-| Model execution (solve) | Real `calliope==0.7.0` install + CBC (`enerplanet/MEME` deferred -- it expects its own canonical JSON, not raw Calliope YAML) | Combined 1,260-node model hits a memory wall at `build()` (see `docs/phase4_solve.md`/`phase4b_solve_0610_sizing.md`). Solved instead per-building (`scripts/solve_all_buildings.py`, see `docs/phase5_per_building_decomposition.md`): **all 1,260/1,260 buildings now solve**, region total cost ≈2,050,572 (placeholder pricing) |
+| Model execution (solve) | Real `calliope==0.7.0` install + CBC (`enerplanet/MEME` deferred -- it expects its own canonical JSON, not raw Calliope YAML) | Combined 1,260-node model hits a memory wall at `build()` (see `docs/phase4_solve.md`/`phase4b_solve_0610_sizing.md`). Solved instead per-building (`scripts/solve_all_buildings.py`, see `docs/phase5_per_building_decomposition.md`): both variants (`--no-cooling` = heating only) solved for all 1,260 buildings; `scripts/summarize_results.py` writes each variant's `summary.csv` (energy, shares, capacities, costs per technology) |
 
 ## Resolution: per-building nodes, not archetype clusters
 
@@ -72,3 +76,35 @@ See `docs/phase4_solve.md` / `docs/phase4b_solve_0610_sizing.md` for the
 full-model build/memory-scaling investigation, and
 `docs/phase5_per_building_decomposition.md` for why/how this scenario is
 solved per-building instead.
+
+## Current results (`outputs/v2_sourced/`, 2026-11-10)
+
+Sourced prices (system perspective, `constraints.md` 8), 26 degC cooling
+setpoint, fixed conversion balance. All 1,260 buildings solved in both
+variants (8 CBC contention timeouts re-solved with `scripts/retry_failed.py`);
+per-building heat, cooling, electricity and pellet balances close to
+<1e-8 relative. Per-technology tables: `outputs/v2_sourced/*/summary.csv`.
+
+| | Heating only | Heating + cooling |
+| --- | --- | --- |
+| Annual system cost (incl. appliance electricity) | EUR 8.23 M (median EUR 4,663 per dwelling) | EUR 10.32 M (median EUR 6,783) |
+| Heat 47.8 GWh: pellet boiler / air HP / ground HP / electric boiler | 83 % / 9.7 % / 3.0 % / 4.0 % | unchanged |
+| Cooling 15.6 GWh: reversible HP / compression chiller | -- | 72 % / 28 % |
+| Grid electricity | 7.92 GWh | 11.17 GWh (+41 %) |
+| Pellets | 47.4 GWh | unchanged |
+
+Reading: at system prices excluding taxes, pellet heat (~EUR 0.076/kWh) is
+no dearer than air-source heat pump heat (~EUR 0.079/kWh) at about a third of
+the investment per kW, so heat pumps (358 dwellings) only add capacity where
+the household pellet boiler hits its per-node ceiling (`flow_cap_max` binds on
+the boiler's *input* carrier: 15 kW pellets = 12.6 kW heat). The result
+therefore rests on two assumptions worth testing next: unconstrained biomass
+supply (`constraints.md` 7) and the per-node scale ceilings. Cooling demand
+(median 10.5 MWh/yr, 16 kW peak per dwelling, even at 26 degC) still looks
+high for Dutch dwellings -- likely missing summer ventilative cooling in buem.
+
+`--no-biomass` (on `solve_single_building.py`/`solve_all_buildings.py`/
+`retry_failed.py`) solves an all-electric gas-free variant without any
+biomass technology or pellet supply, to test the unconstrained-biomass
+assumption (smoke test, `bldg_8` heating only: EUR 7,029/yr all-electric vs.
+EUR 5,521/yr with pellets, air-source heat pumps supplying ~85 % of heat).

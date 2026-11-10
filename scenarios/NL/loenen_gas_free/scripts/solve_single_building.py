@@ -21,7 +21,17 @@ repo's own `.venv_calliope_check/` was set up) and CBC on PATH.
 Usage (from the scenario root, scenarios/NL/loenen_gas_free/):
     python scripts/solve_single_building.py bldg_8
     python scripts/solve_single_building.py bldg_8 --out outputs/per_building/bldg_8.json
+    python scripts/solve_single_building.py bldg_8 --no-cooling   # heating-only variant
+
+``--no-cooling`` solves the heating-only variant from the *same* node
+files: it drops the node's ``demand_cool`` and every ``chiller_*`` tech
+(and the cooling data table), so both variants share identical heating
+inputs and differ only by the cooling service. ``--no-biomass`` likewise
+drops every biomass technology and the pellet supply (an all-electric
+gas-free variant), testing the unconstrained-biomass assumption
+(constraints.md 7).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,7 +55,17 @@ def _write_yaml(path: Path, data: dict) -> None:
         _yaml.dump(data, fh)
 
 
-def build_single_building_model(building_node: str, work_dir: Path) -> Path:
+def _is_cooling_tech(tech_id: str) -> bool:
+    return tech_id == "demand_cool" or tech_id.startswith("chiller_")
+
+
+def _is_biomass_tech(tech_id: str) -> bool:
+    return "biomass" in tech_id
+
+
+def build_single_building_model(
+    building_node: str, work_dir: Path, cooling: bool = True, biomass: bool = True
+) -> Path:
     """Write a one-node model into ``work_dir`` that imports this
     scenario's real tech export / additional_math, and solves only
     ``building_node``'s own full-year demand. Returns the model.yaml path.
@@ -53,12 +73,27 @@ def build_single_building_model(building_node: str, work_dir: Path) -> Path:
     nodes_full = _yaml.load((SCENARIO_ROOT / "nodes/nodes.yaml").open(encoding="utf-8"))
     if building_node not in nodes_full["nodes"]:
         raise ValueError(f"'{building_node}' not found in nodes/nodes.yaml")
-    single_node = {"nodes": {building_node: nodes_full["nodes"][building_node]}}
+    node = dict(nodes_full["nodes"][building_node])
+    if not cooling:
+        node["techs"] = {
+            t: v for t, v in node["techs"].items() if not _is_cooling_tech(t)
+        }
+    if not biomass:
+        node["techs"] = {
+            t: v for t, v in node["techs"].items() if not _is_biomass_tech(t)
+        }
+    single_node = {"nodes": {building_node: node}}
     _write_yaml(work_dir / "nodes.yaml", single_node)
 
-    heat = pd.read_csv(SCENARIO_ROOT / "nodes/demand_heat.csv", index_col=0)[[building_node]]
-    elec = pd.read_csv(SCENARIO_ROOT / "nodes/demand_elec.csv", index_col=0)[[building_node]]
-    cool = pd.read_csv(SCENARIO_ROOT / "nodes/demand_cool.csv", index_col=0)[[building_node]]
+    heat = pd.read_csv(SCENARIO_ROOT / "nodes/demand_heat.csv", index_col=0)[
+        [building_node]
+    ]
+    elec = pd.read_csv(SCENARIO_ROOT / "nodes/demand_elec.csv", index_col=0)[
+        [building_node]
+    ]
+    cool = pd.read_csv(SCENARIO_ROOT / "nodes/demand_cool.csv", index_col=0)[
+        [building_node]
+    ]
     heat.index.name = ""
     elec.index.name = ""
     cool.index.name = ""
@@ -67,7 +102,11 @@ def build_single_building_model(building_node: str, work_dir: Path) -> Path:
     elec.to_csv(work_dir / "nodes/demand_elec.csv")
     cool.to_csv(work_dir / "nodes/demand_cool.csv")
 
-    data_tables = _yaml.load((SCENARIO_ROOT / "nodes/data_tables.yaml").open(encoding="utf-8"))
+    data_tables = _yaml.load(
+        (SCENARIO_ROOT / "nodes/data_tables.yaml").open(encoding="utf-8")
+    )
+    if not cooling:
+        data_tables["data_tables"].pop("loenen_demand_cool", None)
     _write_yaml(work_dir / "nodes/data_tables.yaml", data_tables)
 
     model_yaml = {
@@ -77,7 +116,10 @@ def build_single_building_model(building_node: str, work_dir: Path) -> Path:
                 "calliope_version": "0.7.0",
                 "math_paths": {
                     "additional_math": str(
-                        (SCENARIO_ROOT / "technologies/export/loenen_gas_free_techs.additional_math.yaml")
+                        (
+                            SCENARIO_ROOT
+                            / "technologies/export/loenen_gas_free_techs.additional_math.yaml"
+                        )
                     ).replace("\\", "/")
                 },
                 "extra_math": ["additional_math"],
@@ -87,7 +129,9 @@ def build_single_building_model(building_node: str, work_dir: Path) -> Path:
             "solve": {"solver": "cbc"},
         },
         "import": [
-            str((SCENARIO_ROOT / "technologies/export/loenen_gas_free_techs.yaml")).replace("\\", "/"),
+            str(
+                (SCENARIO_ROOT / "technologies/export/loenen_gas_free_techs.yaml")
+            ).replace("\\", "/"),
             str((SCENARIO_ROOT / "nodes/demand_techs.yaml")).replace("\\", "/"),
             "nodes.yaml",
             "nodes/data_tables.yaml",
@@ -98,8 +142,12 @@ def build_single_building_model(building_node: str, work_dir: Path) -> Path:
     return model_path
 
 
-def solve(building_node: str, work_dir: Path) -> dict:
-    model_path = build_single_building_model(building_node, work_dir)
+def solve(
+    building_node: str, work_dir: Path, cooling: bool = True, biomass: bool = True
+) -> dict:
+    model_path = build_single_building_model(
+        building_node, work_dir, cooling=cooling, biomass=biomass
+    )
     t0 = time.time()
     m = calliope.read_yaml(str(model_path))
     m.build()
@@ -108,15 +156,33 @@ def solve(building_node: str, work_dir: Path) -> dict:
 
     flow_cap = m.results["flow_cap"].to_dataframe().reset_index()
     cost = m.results["cost"].to_dataframe().reset_index()
+
+    def _annual(var: str) -> dict[str, float]:
+        """Annual energy (kWh, hourly timesteps) per tech|carrier, NaN/zero dropped."""
+        df = m.results[var].sum("timesteps").to_dataframe(name=var).reset_index()
+        return {
+            f"{r['techs']}|{r['carriers']}": float(r[var])
+            for _, r in df.iterrows()
+            if r[var] == r[var] and abs(r[var]) > 1e-6
+        }
+
     return {
         "building": building_node,
         "solved_in_s": round(elapsed, 2),
         "total_cost": float(cost["cost"].sum()),
+        "cost_by_tech": {
+            str(t): float(v)
+            for t, v in cost.groupby("techs")["cost"].sum().items()
+            if v == v and abs(v) > 1e-9
+        },
         "flow_cap": {
             f"{r['techs']}|{r['carriers']}": float(r["flow_cap"])
             for _, r in flow_cap.iterrows()
-            if r["flow_cap"] == r["flow_cap"]  # drop NaN (tech/carrier combos that don't apply)
+            if r["flow_cap"]
+            == r["flow_cap"]  # drop NaN (tech/carrier combos that don't apply)
         },
+        "flow_out_annual_kwh": _annual("flow_out"),
+        "flow_in_annual_kwh": _annual("flow_in"),
     }
 
 
@@ -124,7 +190,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("building", help="Node id, e.g. bldg_8 (see nodes/nodes.yaml)")
     parser.add_argument(
-        "--out", type=Path, default=None, help="Write result JSON here (default: print to stdout)"
+        "--out",
+        type=Path,
+        default=None,
+        help="Write result JSON here (default: print to stdout)",
     )
     parser.add_argument(
         "--work-dir",
@@ -132,10 +201,23 @@ def main() -> None:
         default=None,
         help="Scratch dir for the generated one-node model (default: a temp dir under outputs/)",
     )
+    parser.add_argument(
+        "--no-cooling", action="store_true", help="Heating-only variant (drop cooling)"
+    )
+    parser.add_argument(
+        "--no-biomass", action="store_true", help="All-electric variant (drop biomass)"
+    )
     args = parser.parse_args()
 
-    work_dir = args.work_dir or (SCENARIO_ROOT / "outputs/per_building" / args.building / "_model")
-    result = solve(args.building, work_dir)
+    work_dir = args.work_dir or (
+        SCENARIO_ROOT / "outputs/per_building" / args.building / "_model"
+    )
+    result = solve(
+        args.building,
+        work_dir,
+        cooling=not args.no_cooling,
+        biomass=not args.no_biomass,
+    )
 
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

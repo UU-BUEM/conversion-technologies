@@ -36,7 +36,8 @@ def test_electric_ac_uses_electricity_only() -> None:
     tech = get_technology("chiller_electric_household")
     assert set(tech.carriers_in) == {ELECTRICITY}
     assert tech.carriers_in[ELECTRICITY] == 1.0
-    assert tech.carriers_out == {COOLING: pytest.approx(3.2)}
+    # HRE D3.2 split <5 kW: SEER 2025 = 7.2, x 0.7 in-situ factor
+    assert tech.carriers_out == {COOLING: pytest.approx(5.04)}
     assert tech.variant == "electric"
 
 

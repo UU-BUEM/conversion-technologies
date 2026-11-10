@@ -90,8 +90,9 @@ def test_load_technology_rows_joins_costs_by_category_variant_scale() -> None:
         and r["variant"] == "electric"
         and r["scale"] == "household"
     )
-    assert row["cost_flow_cap"] == 150.0
-    assert row["cost_interest_rate"] == pytest.approx(0.10)
+    # DEA 209 electric boiler, single-family: 2.895979 kEUR / 10 kW
+    assert row["cost_flow_cap"] == pytest.approx(289.6)
+    assert row["cost_interest_rate"] == pytest.approx(0.0225)
 
 
 def test_load_technology_rows_filters_by_category() -> None:

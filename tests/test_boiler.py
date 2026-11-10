@@ -47,7 +47,8 @@ def test_electric_boiler_is_near_unity_efficiency() -> None:
     assert tech.variant == "electric"
     # electricity's own cost is left to a separate supply tech, not this one
     assert "cost_flow_in" not in tech.params
-    assert tech.params["cost_interest_rate"] == pytest.approx(0.10)
+    # NL social discount rate, real (docs/sources/parameter_sources.csv)
+    assert tech.params["cost_interest_rate"] == pytest.approx(0.0225)
 
 
 def test_gas_boiler_uses_natural_gas() -> None:
@@ -55,7 +56,8 @@ def test_gas_boiler_uses_natural_gas() -> None:
     assert tech.carriers_in == {NATURAL_GAS: 1.0}
     assert HEAT in tech.carriers_out
     assert tech.variant == "gas"
-    assert tech.params["cost_flow_in"] == pytest.approx(0.04)
+    # fuel is priced once, by the model's supply technology -- never here too
+    assert "cost_flow_in" not in tech.params
 
 
 def test_biomass_boiler_uses_biomass() -> None:
@@ -63,7 +65,9 @@ def test_biomass_boiler_uses_biomass() -> None:
     assert tech.carriers_in == {BIOMASS: 1.0}
     assert tech.flow_cap_max > 0
     assert tech.variant == "biomass"
-    assert tech.params["cost_flow_in"] == pytest.approx(0.035)
+    assert "cost_flow_in" not in tech.params
+    # DEA district pellet plant with flue-gas condensation: >1 on a net basis
+    assert tech.carriers_out[HEAT] > 1.0
 
 
 @pytest.mark.parametrize("scale", ["household", "building", "community"])
@@ -89,7 +93,12 @@ def test_build_rejects_efficiency_below_the_engineering_bound() -> None:
 
 def test_build_rejects_efficiency_above_the_engineering_bound() -> None:
     with pytest.raises(ValueError, match="efficiency"):
-        _build(_valid_row(efficiency=1.0))
+        _build(_valid_row(efficiency=1.2))
+
+
+def test_build_accepts_condensing_efficiency_above_one_on_net_basis() -> None:
+    tech = _build(_valid_row(efficiency=1.04))
+    assert tech.carriers_out[HEAT] == pytest.approx(1.04)
 
 
 def test_build_rejects_capacity_above_the_scale_ceiling() -> None:

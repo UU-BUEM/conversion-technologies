@@ -6,7 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-10
+
+### Fixed
+
+- **Single-carrier conversion technologies no longer produce output for
+  free.** The generated `additional_math.yaml` overrode Calliope's
+  `balance_conversion` with a constraint listing only the multi-carrier
+  technologies -- and a same-named math constraint *replaces* the base one,
+  so every boiler and single-input chiller lost its conversion balance and
+  could deliver heat/cooling with zero fuel or electricity input. Found on a
+  real `calliope==0.7.0` solve of the Loenen scenario. `balance_conversion`
+  now keeps Calliope's base summed balance for every other conversion
+  technology, and the primary-carrier balance moved to its own
+  `balance_conversion_primary_carriers` constraint. **Every Loenen result
+  produced before this fix is invalid** (boiler fuel was never paid for).
+
 ### Changed
+
+- **Every technical and economic parameter is now sourced.** The
+  placeholder values in `new/technologies.csv` and `new/costs.csv` were
+  replaced by values from the Danish Energy Agency technology catalogues
+  (individual heating, April 2026; electricity and district heating, August
+  2026), Heat Roadmap Europe D3.2 (cooling), RVO's ISDE heat pump list
+  (household heat pump capacity ceilings), and the Dutch social discount
+  rate (2.25 % real). Provenance for every value is in
+  `docs/sources/parameter_sources.csv`, enforced by
+  `tests/test_parameter_sources.py`; see `docs/parameter_sources.md`.
+- **BREAKING: cost currency is now EUR (real 2025 prices, excluding VAT and
+  taxes)**, previously USD. All sources publish in EUR.
+- **BREAKING: `cost_flow_in` (fuel cost) is no longer set on any bundled
+  technology.** Fuel and electricity are priced once, on the model's supply
+  technology; the old values double-counted fuel wherever a supply
+  technology also priced it.
+- Boiler efficiency bound widened from 0.8-0.99 to 0.8-1.10 (net/LHV
+  basis: condensing units exceed 1.0); reversible heat pump COP bound from
+  1.5-5 to 1.5-8 (same vapour-compression ceiling as the electric chiller).
 
 - **BREAKING: `weather-cop` now fetches weather data directly from the
   `weather` package instead of reading a pre-exported CSV.** `v0.3.0`'s
@@ -20,6 +55,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dependency -- `core/weather_series.py` (the CSV-reading module `v0.3.0`
   added) and its tests are removed entirely, no CSV path remains. See
   `docs/calliope_schema_mapping.md` "Weather-driven COP profiles".
+
+### Added
+
+- `docs/sources/`: `references.csv`, `parameter_sources.csv`, and the Dutch
+  heat pump market database `rvo_isde_heat_pumps_2026-11.csv` (2,843 ISDE-
+  eligible models: heat output, subsidy, refrigerant/GWP) plus a summary.
+- `tools/rvo_heat_pumps_to_csv.py`: rebuilds the RVO database from RVO's
+  monthly Excel release.
 
 ## [0.3.0] - 2026-07-28
 

@@ -15,17 +15,18 @@ heat-pump dispatch fail to satisfy the balance equation at all.
 This module generates the same fix Calliope's own team uses in their
 reference CHP example (``calliope/src/calliope/example_models/urban_scale/
 additional_math.yaml``: a ``link_chp_outputs``-style equality constraint
-plus a scoped ``balance_conversion`` override) -- generalised so it is
+plus a ``balance_conversion`` override that keeps the base summed balance
+for every other conversion technology) -- generalised so it is
 driven structurally (does this tech have >1 carrier on a side?) rather than
 by technology name, and symmetric for the input side (heat pump) as well as
 the output side (CHP). Boiler (1 carrier each side) triggers none of this;
 its balance is already just that one carrier.
 
-Not validated against a running Calliope install (none is available here) --
-the fix was derived algebraically from Calliope's own published base math
-and cross-checked against its official example, not from a real solve. See
-``docs/calliope_schema_mapping.md`` "Carrier ratio math" for the full
-derivation and that caveat.
+Derived algebraically from Calliope's own published base math, cross-checked
+against its official example, and since exercised by real ``calliope==0.7.0``
+solves (``scenarios/NL/loenen_gas_free``) -- which is how the missing
+base-balance branch (see ``build_ratio_math``) was found. See
+``docs/calliope_schema_mapping.md`` "Carrier ratio math".
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ from conversion_technologies.core.validation import require_range
 _LINK_IN = "link_flow_in_carriers"
 _LINK_OUT = "link_flow_out_carriers"
 _BALANCE_OVERRIDE = "balance_conversion"
+_BALANCE_PRIMARY = "balance_conversion_primary_carriers"
 
 
 def _secondary_carriers(
@@ -111,7 +113,11 @@ def carrier_flow_ratios(tech: TechnologySpec) -> dict[str, float]:
     if secondary_in:
         assert tech.primary_carrier_in is not None
         result["carrier_flow_ratio_in"] = _ratio(
-            tech.carriers_in, tech.primary_carrier_in, secondary_in[0], tech_id=tech.id, side="in"
+            tech.carriers_in,
+            tech.primary_carrier_in,
+            secondary_in[0],
+            tech_id=tech.id,
+            side="in",
         )
     secondary_out = _secondary_carriers(
         tech.carriers_out, tech.primary_carrier_out, tech_id=tech.id, side="out"
@@ -119,7 +125,11 @@ def carrier_flow_ratios(tech: TechnologySpec) -> dict[str, float]:
     if secondary_out:
         assert tech.primary_carrier_out is not None
         result["carrier_flow_ratio_out"] = _ratio(
-            tech.carriers_out, tech.primary_carrier_out, secondary_out[0], tech_id=tech.id, side="out"
+            tech.carriers_out,
+            tech.primary_carrier_out,
+            secondary_out[0],
+            tech_id=tech.id,
+            side="out",
         )
     return result
 
@@ -245,19 +255,48 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
             "equations": link_out_equations,
         }
 
-    balance_techs = techs_with_ratio_in | techs_with_ratio_out
+    balance_techs = ", ".join(sorted(techs_with_ratio_in | techs_with_ratio_out))
+    # A constraint named like a base-math one REPLACES it entirely (Calliope
+    # merges math files by constraint name) -- it does not narrow it. So the
+    # override below must keep the base summed balance for every *other*
+    # conversion technology (boilers, single-input chillers, ...); dropping
+    # that branch silently lets them produce output with zero input.
+    # Verified on a real calliope==0.7.0 solve: with the branch missing,
+    # boilers delivered heat while their supply technologies delivered
+    # nothing. The base expression is copied verbatim from
+    # calliope/math/base.yaml (balance_conversion).
     constraints[_BALANCE_OVERRIDE] = {
         "description": (
-            "Overrides the base balance_conversion for technologies with "
-            "more than one carrier on one side: restricts the balance to "
-            "each side's primary carrier only, since link_flow_in_carriers/"
-            "link_flow_out_carriers ties every secondary carrier to that "
-            "primary separately. Without this override the base (summed) "
-            "balance double-counts input for a technology with a real "
-            "efficiency set on more than one carrier of the same side -- "
-            "see docs/calliope_schema_mapping.md. Absent for boiler and any "
-            "other single-carrier-per-side technology, which keep the "
-            "unmodified base balance_conversion."
+            "Calliope's base balance_conversion, unchanged, for every "
+            "conversion technology EXCEPT those with more than one carrier "
+            "on a side, which get balance_conversion_primary_carriers "
+            "instead. Overriding this constraint replaces the base one, so "
+            "this branch must stay -- see docs/calliope_schema_mapping.md "
+            "'Carrier ratio math'."
+        ),
+        "foreach": ["nodes", "techs", "timesteps"],
+        "where": (
+            "base_tech==conversion AND NOT include_storage==true AND "
+            f"NOT [{balance_techs}] in techs"
+        ),
+        "equations": [
+            {
+                "expression": (
+                    "sum(flow_out_inc_eff, over=carriers) == "
+                    "sum(flow_in_inc_eff, over=carriers)"
+                )
+            }
+        ],
+    }
+    constraints[_BALANCE_PRIMARY] = {
+        "description": (
+            "Conversion balance for technologies with more than one carrier "
+            "on one side, on each side's primary carrier only: "
+            "link_flow_in_carriers/link_flow_out_carriers tie every "
+            "secondary carrier to that primary separately. The base summed "
+            "balance would double-count input for a technology with a real "
+            "efficiency on more than one carrier of the same side -- see "
+            "docs/calliope_schema_mapping.md."
         ),
         "foreach": ["nodes", "techs", "timesteps"],
         # Explicit [tech, ...] in techs membership (not just
@@ -267,7 +306,7 @@ def build_ratio_math(techs: Iterable[TechnologySpec]) -> dict[str, Any] | None:
         # link_flow_in_carriers above.
         "where": (
             "base_tech==conversion AND NOT include_storage==true AND "
-            f"[{', '.join(sorted(balance_techs))}] in techs"
+            f"[{balance_techs}] in techs"
         ),
         "equations": balance_equations,
     }

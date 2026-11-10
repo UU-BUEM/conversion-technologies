@@ -104,7 +104,7 @@ def test_heat_pumps_have_no_fuel_cost_or_ramping_by_default() -> None:
         tech = get_technology(tech_id)
         assert "cost_flow_in" not in tech.params
         assert "flow_ramping" not in tech.params
-        assert tech.params["cost_interest_rate"] == pytest.approx(0.10)
+        assert tech.params["cost_interest_rate"] == pytest.approx(0.0225)
 
 
 def test_build_rejects_a_quality_factor_above_the_carnot_limit() -> None:

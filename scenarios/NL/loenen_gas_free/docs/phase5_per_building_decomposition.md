@@ -1,5 +1,15 @@
 # Phase 5 — Per-building decomposition: formulation, justification, and pipeline
 
+> **Results superseded (2026-11-09).** Every cost and technology result
+> quoted below (e.g. region total 2,050,572) came from runs in which the
+> generated `balance_conversion` override had removed the conversion
+> balance from every boiler and single-input chiller, so those
+> technologies produced heat/cooling for free, and from placeholder
+> prices. Both are fixed (repo root `CHANGELOG.md`, `.claude/resolved.md`
+> "balance-conversion-base-branch"; `constraints.md` 8). The decomposition
+> argument itself (sections 1-6) is unaffected. Current results:
+> `outputs/v2_sourced/` (see `README.md`).
+
 ## Abstract
 
 The Loenen gas-free scenario's full-region energy-system optimization

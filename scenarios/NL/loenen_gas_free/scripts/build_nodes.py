@@ -20,25 +20,32 @@ Usage
         --hourly-parquet scenarios/NL/loenen_gas_free/data/loenen_single_dwelling_hourly.parquet \\
         --out-dir scenarios/NL/loenen_gas_free/nodes
 """
+
 from __future__ import annotations
 
 import argparse
+import csv
 from pathlib import Path
 
 import pandas as pd
 from ruamel.yaml import YAML
 
 SCENARIO_ROOT = Path(__file__).resolve().parent.parent
-_TECHS_EXPORT_PATH = (
-    SCENARIO_ROOT / "technologies/export/loenen_gas_free_techs.yaml"
-)
+_TECHS_EXPORT_PATH = SCENARIO_ROOT / "technologies/export/loenen_gas_free_techs.yaml"
 
+_ENERGY_PRICES_PATH = SCENARIO_ROOT / "energy_prices.csv"
+
+# Technologies whose catalogue cost is only a *proxy* taken from a much
+# larger plant (household/building biomass CHP from DEA's 3 MW_e pellet
+# CHP; household/building absorption chillers from HRE's 500 kW unit, which
+# HRE itself calls prohibitively expensive at small sizes) are deliberately
+# left out: a large-plant cost would make them look artificially cheap. See
+# docs/sources/parameter_sources.csv (basis = proxy) and constraints.md.
 _HOUSEHOLD_TECH_IDS = [
     "boiler_electric_household",
     "boiler_biomass_household",
     "heat_pump_electric_household",
     "heat_pump_geothermal_household",
-    "chp_biomass_household",
 ]
 
 # Phase 5 real finding: 18 of 1,260 buildings have a peak heat demand
@@ -55,7 +62,6 @@ _BUILDING_TECH_IDS = [
     "boiler_biomass_building",
     "heat_pump_electric_building",
     "heat_pump_geothermal_building",
-    "chp_biomass_building",
 ]
 
 # Cooling, added alongside the heating techs above. Same household/building
@@ -65,12 +71,10 @@ _BUILDING_TECH_IDS = [
 # also gets the building-scale chiller options.
 _HOUSEHOLD_CHILLER_TECH_IDS = [
     "chiller_electric_household",
-    "chiller_absorption_household",
     "chiller_heat_pump_reversible_household",
 ]
 _BUILDING_CHILLER_TECH_IDS = [
     "chiller_electric_building",
-    "chiller_absorption_building",
     "chiller_heat_pump_reversible_building",
 ]
 
@@ -83,6 +87,19 @@ def _write_yaml(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
         _yaml.dump(data, fh)
+
+
+def _energy_prices() -> dict[str, float]:
+    """Supply-tech energy prices (EUR2025/kWh) from ``energy_prices.csv``.
+
+    Each row there names its source and conversion (system perspective:
+    excluding taxes, levies, subsidies and VAT) -- no price is hardcoded here.
+    """
+    with _ENERGY_PRICES_PATH.open(newline="", encoding="utf-8-sig") as fh:
+        return {
+            row["supply_tech"]: float(row["cost_flow_out_eur_per_kwh"])
+            for row in csv.DictReader(fh)
+        }
 
 
 def _household_heat_cap_total() -> float:
@@ -164,6 +181,8 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
     elec_wide.to_csv(elec_csv)
     cool_wide.to_csv(cool_csv)
 
+    prices = _energy_prices()
+
     # Calliope's sink_use_equals convention is a positive consumption rate;
     # demand techs draw it in via carrier_in -- see Calliope's own
     # urban_scale example model for the same shape this mirrors.
@@ -210,39 +229,56 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
             # Real finding (Phase 4): without a supply tech for every carrier
             # the conversion techs consume, the model is infeasible -- a
             # heat pump/boiler/CHP can only draw a carrier that something
-            # actually produces. Grid electricity and biomass are priced
-            # (placeholder currency/kWh, not a real tariff -- flagged);
-            # ambient_heat/ground_heat are effectively free and uncapped,
-            # representing an always-available outdoor-air/ground source.
+            # actually produces. Prices (EUR2025/kWh, system perspective:
+            # excluding taxes, levies, subsidies and VAT) come from
+            # energy_prices.csv, which names each one's source; ambient_heat/
+            # ground_heat are free and uncapped (their collector cost is in
+            # the heat pump investment).
             "supply_grid_electricity": {
                 "base_tech": "supply",
                 "name": "Grid electricity import",
                 "carrier_out": "electricity",
                 "flow_cap_max": 1e6,
-                "cost_flow_out": {"data": 0.25, "index": "monetary", "dims": "costs"},
-                "comment": "Placeholder grid tariff (USD/kWh, this package's currency convention) -- not a real Dutch electricity price.",
+                "cost_flow_out": {
+                    "data": prices["supply_grid_electricity"],
+                    "index": "monetary",
+                    "dims": "costs",
+                },
+                "comment": "EUR/kWh; Eurostat nrg_pc_204, NL household band DC, excl. taxes and levies, 2025 mean (energy_prices.csv).",
             },
             "supply_biomass": {
                 "base_tech": "supply",
                 "name": "Biomass (wood pellet) fuel supply",
                 "carrier_out": "biomass",
                 "flow_cap_max": 1e6,
-                "cost_flow_out": {"data": 0.05, "index": "monetary", "dims": "costs"},
-                "comment": "Placeholder pellet price (USD/kWh) -- not sourced from a real market quote.",
+                "cost_flow_out": {
+                    "data": prices["supply_biomass"],
+                    "index": "monetary",
+                    "dims": "costs",
+                },
+                "comment": "EUR/kWh; DEA SOEB25 consumer-level wood pellet factor price 2025, DKK->EUR (energy_prices.csv).",
             },
             "supply_ambient_heat": {
                 "base_tech": "supply",
                 "name": "Free ambient (outdoor-air) heat source",
                 "carrier_out": "ambient_heat",
                 "flow_cap_max": 1e6,
-                "cost_flow_out": {"data": 0.0, "index": "monetary", "dims": "costs"},
+                "cost_flow_out": {
+                    "data": prices["supply_ambient_heat"],
+                    "index": "monetary",
+                    "dims": "costs",
+                },
             },
             "supply_ground_heat": {
                 "base_tech": "supply",
                 "name": "Free ground heat source",
                 "carrier_out": "ground_heat",
                 "flow_cap_max": 1e6,
-                "cost_flow_out": {"data": 0.0, "index": "monetary", "dims": "costs"},
+                "cost_flow_out": {
+                    "data": prices["supply_ground_heat"],
+                    "index": "monetary",
+                    "dims": "costs",
+                },
             },
         }
     }
@@ -353,9 +389,15 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
     _write_yaml(out_dir / "data_tables.yaml", data_tables)
 
     print(f"Wrote {len(node_names)} nodes to {out_dir}")
-    print(f"Heat demand CSV: {heat_csv} ({heat_wide.shape[0]} timesteps x {heat_wide.shape[1]} nodes)")
-    print(f"Elec demand CSV: {elec_csv} ({elec_wide.shape[0]} timesteps x {elec_wide.shape[1]} nodes)")
-    print(f"Cool demand CSV: {cool_csv} ({cool_wide.shape[0]} timesteps x {cool_wide.shape[1]} nodes)")
+    print(
+        f"Heat demand CSV: {heat_csv} ({heat_wide.shape[0]} timesteps x {heat_wide.shape[1]} nodes)"
+    )
+    print(
+        f"Elec demand CSV: {elec_csv} ({elec_wide.shape[0]} timesteps x {elec_wide.shape[1]} nodes)"
+    )
+    print(
+        f"Cool demand CSV: {cool_csv} ({cool_wide.shape[0]} timesteps x {cool_wide.shape[1]} nodes)"
+    )
 
 
 def main() -> None:

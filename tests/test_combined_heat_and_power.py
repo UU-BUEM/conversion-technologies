@@ -61,7 +61,8 @@ def test_gas_chp_produces_electricity_and_heat_from_natural_gas() -> None:
     assert set(tech.carriers_out) == {ELECTRICITY, HEAT}
     assert tech.primary_carrier_out == ELECTRICITY
     assert tech.variant == "gas"
-    assert tech.params["cost_flow_in"] == pytest.approx(0.04)
+    assert "cost_flow_in" not in tech.params  # fuel priced by the supply tech
+    # DEA: start-up within 0.5 h -> no ramp limit at hourly resolution
     assert tech.params["flow_ramping"] == pytest.approx(1.0)
 
 
@@ -70,14 +71,15 @@ def test_biomass_chp_produces_electricity_and_heat_from_biomass() -> None:
     assert tech.carriers_in == {BIOMASS: 1.0}
     assert set(tech.carriers_out) == {ELECTRICITY, HEAT}
     assert tech.variant == "biomass"
-    assert tech.params["cost_flow_in"] == pytest.approx(0.035)
-    assert tech.params["flow_ramping"] == pytest.approx(0.3)
+    assert "cost_flow_in" not in tech.params
+    assert tech.params["flow_ramping"] == pytest.approx(1.0)
 
 
 def test_chp_dispatch_factors_are_used_directly_as_carrier_ratios() -> None:
-    tech = get_technology("chp_gas_household")
-    assert tech.carriers_out[ELECTRICITY] == pytest.approx(0.3375)
-    assert tech.carriers_out[HEAT] == pytest.approx(0.5625)
+    # DEA 06 gas engine: electrical 0.47, heat 0.47 / Cb 0.99
+    tech = get_technology("chp_gas_community")
+    assert tech.carriers_out[ELECTRICITY] == pytest.approx(0.47)
+    assert tech.carriers_out[HEAT] == pytest.approx(0.4747)
 
 
 def test_chp_total_efficiency_never_exceeds_one() -> None:

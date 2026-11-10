@@ -9,6 +9,7 @@ scenario-specific dependency).
 Usage (from the scenario root, scenarios/NL/loenen_gas_free/):
     python scripts/solve_full.py
 """
+
 from __future__ import annotations
 
 import time

@@ -10,7 +10,9 @@ construction (no shared state, no coordination needed between workers).
 Usage (from the scenario root, scenarios/NL/loenen_gas_free/):
     python scripts/solve_all_buildings.py --workers 16
     python scripts/solve_all_buildings.py --workers 16 --limit 50  # smoke test
+    python scripts/solve_all_buildings.py --workers 12 --no-cooling         --out outputs/heating_only/all_buildings_results.json         --per-building-dir outputs/heating_only/per_building
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,19 +33,26 @@ def _all_building_ids() -> list[str]:
     return list(nodes_full["nodes"].keys())
 
 
-def _solve_one(building: str, per_building_dir: Path) -> dict:
+def _solve_one(
+    building: str, per_building_dir: Path, cooling: bool, biomass: bool = True
+) -> dict:
     work_dir = per_building_dir / building / "_model"
     try:
-        return solve(building, work_dir)
+        return solve(building, work_dir, cooling=cooling, biomass=biomass)
     except Exception as exc:  # noqa: BLE001 -- one building's failure must not kill the batch
         return {"building": building, "error": f"{type(exc).__name__}: {exc}"}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workers", type=int, default=8, help="Parallel worker processes")
     parser.add_argument(
-        "--limit", type=int, default=None, help="Only solve the first N buildings (smoke test)"
+        "--workers", type=int, default=8, help="Parallel worker processes"
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Only solve the first N buildings (smoke test)",
     )
     parser.add_argument(
         "--out",
@@ -57,6 +66,12 @@ def main() -> None:
         default=SCENARIO_ROOT / "outputs/per_building",
         help="Scratch dir for each building's one-node model (default: outputs/per_building)",
     )
+    parser.add_argument(
+        "--no-cooling", action="store_true", help="Heating-only variant (drop cooling)"
+    )
+    parser.add_argument(
+        "--no-biomass", action="store_true", help="All-electric variant (drop biomass)"
+    )
     args = parser.parse_args()
 
     buildings = _all_building_ids()
@@ -69,7 +84,14 @@ def main() -> None:
     failures: list[dict] = []
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         futures = {
-            pool.submit(_solve_one, b, args.per_building_dir): b for b in buildings
+            pool.submit(
+                _solve_one,
+                b,
+                args.per_building_dir,
+                not args.no_cooling,
+                not args.no_biomass,
+            ): b
+            for b in buildings
         }
         for i, fut in enumerate(as_completed(futures), 1):
             r = fut.result()
@@ -78,11 +100,15 @@ def main() -> None:
                 print(f"[{i}/{len(buildings)}] {r['building']}: FAILED -- {r['error']}")
             else:
                 results.append(r)
-                print(f"[{i}/{len(buildings)}] {r['building']}: cost={r['total_cost']:.2f}")
+                print(
+                    f"[{i}/{len(buildings)}] {r['building']}: cost={r['total_cost']:.2f}"
+                )
 
     elapsed = time.time() - t0
     region_total_cost = sum(r["total_cost"] for r in results)
     summary = {
+        "variant": ("heating_only" if args.no_cooling else "heating_and_cooling")
+        + ("_no_biomass" if args.no_biomass else ""),
         "n_buildings_requested": len(buildings),
         "n_solved": len(results),
         "n_failed": len(failures),
@@ -99,7 +125,9 @@ def main() -> None:
         f"Region total cost: {region_total_cost:.2f}. Wrote {args.out}"
     )
     if failures:
-        print(f"WARNING: {len(failures)} building(s) failed -- see '{args.out}' for details")
+        print(
+            f"WARNING: {len(failures)} building(s) failed -- see '{args.out}' for details"
+        )
 
 
 if __name__ == "__main__":

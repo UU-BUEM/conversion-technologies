@@ -1,0 +1,5 @@
+category,n_models,kw_p10,kw_p50,kw_p90,kw_p95,kw_max,subsidy_eur_median,subsidy_eur_min,subsidy_eur_max
+air_to_water,2202,5.0,9.0,19.0,30.0,68.0,3050.0,1250.0,16325.0
+ground_to_water,226,6.0,12.0,29.0,45.0,69.0,4725.0,4200.0,13275.0
+heat_pump_water_heater,341,,,,,,725.0,500.0,950.0
+water_to_water,74,4.0,7.0,51.9,66.0,68.0,4425.0,4200.0,13125.0

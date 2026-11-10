@@ -50,7 +50,10 @@ _FORMULA_COLUMNS = ("cop", "aux_electricity_ratio")
 # heat-driven and have COP < 1 by definition.
 _COP_BOUNDS: dict[str, tuple[float, float]] = {
     "electric": (2.0, 8.0),
-    "heat_pump_reversible": (1.5, 5.0),
+    # Same vapour-compression cycle as "electric", so the same ceiling: a
+    # small reversible split unit's in-situ seasonal COP is ~5 (HRE D3.2
+    # split <5 kW SEER x 0.7 in-situ factor, docs/parameter_sources.md).
+    "heat_pump_reversible": (1.5, 8.0),
     "absorption": (0.4, 1.3),
 }
 
