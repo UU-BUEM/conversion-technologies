@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Loenen: solver comparison** (scenario): `scripts/benchmark_solvers.py`
+  times CBC (Pyomo), HiGHS (simplex, interior point) and Gurobi (barrier),
+  the latter two through Calliope's native backends, on identical
+  per-building models. 60 dwellings: all optimal, objectives within 8e-9;
+  median solve 27.4 / 14.4 / 10.7 / 3.7 s. See
+  `scenarios/NL/loenen_gas_free/docs/solver_comparison.md`.
+
 ## [0.7.0] - 2026-11-26
 
 ### Added
