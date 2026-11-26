@@ -6,6 +6,130 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-26
+
+### Added
+
+- **Stationary batteries** (`new/battery/`): `battery_lithium_ion_household`
+  and `battery_lithium_ion_community`, Calliope `storage` on electricity,
+  sized in energy and power. New columns: `flow_cap_per_storage_cap_max`,
+  `storage_loss` (`technologies.csv`), `cost_storage_cap` (`costs.csv`);
+  every other row leaves them blank. Community costs from the Danish Energy
+  Agency storage datasheet (sheet 180, May 2025, EUR2020 -> 2025): 239
+  EUR/kWh + 103 EUR/kW, 9.9 EUR/kW/yr, 91% round trip, 20 years. Home
+  battery: 522 EUR per usable kWh installed, excl. VAT (energievergelijk.nl,
+  fixed 10 kWh system), 81.5% round trip, 15 years. Grid export stays a
+  scenario tech, like grid import. See `docs/calliope_schema_mapping.md`
+  "Stationary batteries".
+- **Loenen scenario: measures catalogue and energy-community design**
+  (scenario only, no package change). `scenarios/NL/loenen_gas_free/measures/`
+  is a sourced inventory of loenenenergie.nl (25 measures, 12 subsidy schemes,
+  6 shared assets, context), validated and converted to JSON by
+  `scripts/build_measures_json.py`. `docs/energy_community_workflow.md` sets out
+  the region → energy-community workflow: a provided network or pylovo grid,
+  simulation, flexibility, a community filter, a per-feeder Calliope model and
+  a power-flow re-check.
+- **Loenen scenario: grid model (energy-community step 1)**, scenario only.
+  `scripts/build_grid.py` builds one grid package, the same format for every
+  source. It assigns each building to an MV/LV station and an LV feeder. The
+  source is the first available of:
+  - a provided network;
+  - the DSO's open data (Liander: cable and station geometry, CC BY 4.0, plus
+    the per-transformer ratings and peaks list, which may not be
+    redistributed);
+  - a synthetic grid from the enerplanet-pylovo API, with a cross-check
+    against the DSO.
+
+  Buildings are traced along the LV cable geometry. For Loenen: 1,229 of
+  1,260 buildings over 42 stations and 103 feeders. `scenario_env.yml` gains
+  shapely, pyproj, networkx, scipy and pytest; scenario tests are in
+  `scenarios/NL/loenen_gas_free/tests/`. See `docs/phase7_grid.md`.
+
+- **Loenen energy community, step 2: demand and supply per station**
+  (scenario only, no package change). Envelope-retrofit region copies
+  (`scripts/build_retrofit_region.py`, TABULA variant 2/3), 138 background
+  buildings (multi-unit and service), an EV-50% run, rooftop PV potential
+  for every roof plus the Thomassen roof calibrated to 800 MWh/yr
+  (`scripts/build_pv_potential.py`, via the `pv-profile` CLI), all summed
+  per Liander station (`scripts/build_step2_profiles.py`). The modelled
+  present-day electric peak agrees closely with Liander's measured
+  station peaks (figures kept local: licensed). Phase 1 wrapper gains `--region-dir`, `--ids-file`,
+  `--window-ach`; `build_grid.py --buildings` takes several files. All
+  Phase 1 runs use buem's window fix (TABULA glazing share, window shading)
+  and `--window-ach 3`: cooling 10.3 -> 1.8 MWh per dwelling. See
+  `docs/phase8_demand_supply.md`.
+- **Loenen energy community, steps 5-6: community pilot** (scenario only).
+  `scripts/community/`: `select_members.py` (seeded draw stratified by
+  feeder, or a provided list), `build_community.py` (members via
+  `build_nodes.py`, plus rooftop PV, home battery, grid export
+  `demand_grid_export` at the day-ahead price; modes independent /
+  community / community with an hourly station limit), `solve_community.py`.
+  Pilot: 20 members on station MSR5000927. `energy_prices.csv` gains the
+  export row; `references.csv` gains the Energy-Charts day-ahead source.
+  `solve_independent.py` solves the independent variant exactly as one
+  model per member. `build_community.py --solver` defaults to `highs`
+  through Calliope's own HiGHS backend (`config.build.backend: highs`): same
+  optimum as CBC on the one-week test, 2.6x faster. Pyomo's HiGHS
+  interfaces fail on Calliope 0.7.0 models with Pyomo 6.10.1 and 6.9.4; the
+  `highspy` comment in `scenario_env.yml` now says so.
+  See `docs/phase9_community_pilot.md`.
+
+- **Generation technologies** (`generation_technologies/`, own
+  `technologies.csv`/`costs.csv`; CLI alias `pv`): rooftop photovoltaics
+  `pv_rooftop_household` and `pv_rooftop_building` as Calliope `supply`
+  technologies (`source_unit: per_cap`, `flow_out_eff` 1, `flow_cap` in
+  kWp). Costs and lifetime from THD-Spatial-AI/OpenTech-DB
+  (`solar_pv_distributed`, USD2024 -> EUR2025). See
+  `docs/generation_technologies.md`.
+- **PV profiles** (`generation_technologies/pv/`): hourly AC output per
+  kWp from NREL PVWatts v8 via NREL-PySAM 7.1.1, identical to
+  EnerPlanET's PV service (enerplanet/pysam-pv): `tests/test_pv.py`
+  checks it against a pinned copy of the service's `simulate.py` on its
+  MERRA-2 2018 test weather. Weather from the `weather` package's
+  curated variables (`T`, `DHI`, `DNI`, `WS_10M`; weather >= 2.0). Roof
+  faces (as buem exports them) -> arrays and per-building potential
+  (`pv/roof.py`); Calliope `source_use_max` data table and node
+  placement (`pv/profiles.py`); CLI `pv-profile`. NREL-PySAM is the
+  optional extra `pv` (conda: `nrel::nrel-pysam`).
+- **Supply technologies**: `TechnologySpec.base_tech` accepts `supply`
+  (no input carrier, one output carrier, `source_unit`); the `modern`
+  exporter writes a `supply` body.
+- `tests/test_parameter_sources.py` also covers
+  `generation_technologies/`, including text-valued settings.
+- **Electric-vehicle category** (`new/ev/`, CLI alias `ev`): AC home
+  charger, AC building charge points, DC community fast-charging hub,
+  vehicle-to-grid discharger and the vehicle's traction battery, linked by
+  a new `ev_electricity` carrier. Driving demand and charging away from
+  home are scenario data (from the occupancy package's EV model), not
+  catalogue technologies. Costs: home charger from ANWB (derived), DC hub
+  from Virta (proxy, charger only), V2G battery wear from BloombergNEF's
+  2024 pack price over an assumed 2,000 cycles; the battery itself has no
+  investment cost. See `docs/calliope_schema_mapping.md` "Electric
+  vehicles".
+- **Storage technologies**: `TechnologySpec.base_tech` (`conversion` or
+  `storage`); the `modern` exporter writes a `storage` body. New
+  `technologies.csv` columns `storage_cap_max`, `storage_cap_min`,
+  `storage_discharge_depth`. `cost_flow_cap` is optional for storage only.
+- **Time-varying availability**: technologies with
+  `TechnologySpec.time_varying_availability` get a custom-math constraint
+  `flow_out <= flow_cap * timestep_resolution * flow_out_max_relative`
+  (`calliope_export/availability_math.py`), written into the same
+  `additional_math.yaml` as the carrier-ratio math. Calliope 0.7.0 has no
+  built-in time-varying upper bound. Verified in a real `calliope==0.7.0`
+  solve: no charging or discharging while the car is unplugged.
+- **Loenen scenario: electric vehicles** (`scenarios/NL/loenen_gas_free`,
+  `docs/phase6_ev.md`). Phase 1 rerun with 20% EV ownership; EV nodes get
+  the home charger (capacity fixed to the household's wallbox), battery,
+  driving demand and away charging; `solve_single_building.py`/
+  `solve_all_buildings.py` take `--ev smart|uncontrolled|v2g|none`. Data
+  tables are now kept per node only when their tech is at the node.
+- **Loenen scenario: hourly grid price** (`scripts/build_grid_price.py`,
+  `grid_price_nl_2018.csv`): Eurostat flat price plus the hourly deviation
+  of the 2018 NL day-ahead price (Energy-Charts / SMARD.de, CC BY 4.0).
+  `build_nodes.py --grid-price day_ahead` (default; `flat` reproduces
+  earlier runs) and `--nodes-dir` on the solve scripts. With it, smart EV
+  charging saves EUR 45/yr for a sample household.
+
 ## [0.4.1] - 2026-11-10
 
 ### Fixed
@@ -22,6 +146,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking (environment):** the `weather` dependency is now the
+  EnerPlanET line, `enerplanet/weather` v2.5.0 (`pointquery,solar`
+  extras), instead of `UU-BUEM/weather@main`. Its `get_point_weather`
+  requires naming the variables; `weather-cop` now asks for `["T"]`, the
+  PV profiles for `["T", "DHI", "DNI", "WS_10M"]`. Update an existing
+  environment with `conda env update -f infrastructure/env/conversion_env.yml`.
 - Calliope target fixed at `calliope==0.7.0` (decided; the 0.6.10 question
   is closed).
 - `infrastructure/env/scenario_env.yml`: Python 3.11 -> 3.12 (`calliope==0.7.0`
