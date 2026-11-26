@@ -8,6 +8,12 @@ This folder exists so the scenario has a home while it's small; split into its
 own repo once it outgrows living alongside `conversion-technologies`' own
 package code (tracked as an open decision, not yet taken).
 
+**Next: energy community** (design only, 2026-11-25):
+`docs/energy_community_workflow.md` sets out the region → ~200-member
+community workflow, and `measures/` holds the sourced catalogue of Loenen's
+measures, subsidies and shared assets (`python scripts/build_measures_json.py`
+validates it and writes `measures/loenen_measures.json`).
+
 ## What this scenario is
 
 A per-building (not clustered — see "Resolution" below) Calliope model of
@@ -27,6 +33,8 @@ add. See `constraints.md` for the exact constraint set.
 | Building geometry, TABULA archetype | `buem`'s `src/buem/data/buildings/netherlands/Loenen/` | Already checked in |
 | Per-building hourly heat demand | `buem`'s `scripts/run_region_hourly.py`, via `scripts/run_demand_with_cooling_setpoint.py` (cooling setpoint 26 degC instead of buem's 21 degC default; `constraints.md` 10) | `data/loenen_single_dwelling_hourly_cool26.parquet` (1,260 buildings x 8,760 h). Cooling demand is still high (median 10.5 MWh/yr, peak 16 kW per dwelling) -- buem likely lacks summer ventilative cooling; treat cooling results as indicative |
 | Energy prices | `energy_prices.csv` (Eurostat electricity excl. taxes; Danish Energy Agency pellet factor price) | Sourced, system perspective (`constraints.md` 8) |
+| Hourly grid price | `grid_price_nl_2018.csv` from `scripts/build_grid_price.py`: Eurostat flat price + NL day-ahead 2018 hourly deviation (Energy-Charts / SMARD.de, CC BY 4.0) | `build_nodes.py --grid-price day_ahead` (default) -> `nodes_day_ahead/`; `--grid-price flat` reproduces v3 (`docs/phase6_ev.md`) |
+| Electric vehicles (20% of households) | Phase 1 rerun with `--ev-ownership-probability 0.2`: `data/loenen_single_dwelling_hourly_cool26_ev20.parquet` (`ev_kW`, `ev_plugged_in`, `ev_drive_kW`, `ev_away_kW` from occupancy's EV model via buem); EV techs from this repo's `ev` category | Wired by `scripts/build_nodes.py`; variants `--ev smart/uncontrolled/v2g/none`; all 1,260 buildings solved for flat smart, day-ahead smart and day-ahead uncontrolled (`outputs/v4/`): smart charging saves EUR 12.7 k/yr (median EUR 48 per EV) -- see `docs/phase6_ev.md` |
 | Per-household electricity/occupancy profile | `occupancy` (via `buem`'s `AttributeBuilder`, or called standalone) | `buem` already depends on it; standalone per-building export not yet scripted |
 | Weather (Loenen point) | `weather`, provider `merra-2` (default) or `era5-land` (needs the documented Jan-2018 boundary patch — see `buem`'s CLAUDE.md "Independent validation folder") | Available |
 | Conversion technology YAML + carrier-ratio math | *this repo*, `calliope_export.modern`/`ratio_math`, scoped to the non-gas `technology_ids` this scenario selects | This repo already does this; scenario-level filtering is new (see below) |

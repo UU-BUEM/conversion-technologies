@@ -1,4 +1,72 @@
 techs:
+  battery_lithium_ion_community:
+    base_tech: storage
+    name: Stationary community battery (lithium-ion) (community)
+    color: '#512DA8'
+    carrier_in: electricity
+    carrier_out: electricity
+    flow_in_eff: 0.95394
+    flow_out_eff: 0.95394
+    flow_cap_max:
+      data: 2000.0
+      index: electricity
+      dims: carriers
+    lifetime: 20
+    cost_flow_cap:
+      data: 102.96
+      index:
+        -   - monetary
+            - electricity
+      dims:
+        - costs
+        - carriers
+    storage_cap_max: 4000.0
+    flow_cap_per_storage_cap_max: 1.0
+    storage_loss: 4.1667e-05
+    cost_om_annual:
+      data: 9.917
+      index:
+        -   - monetary
+            - electricity
+      dims:
+        - costs
+        - carriers
+    cost_interest_rate:
+      data: 0.0225
+      index: monetary
+      dims: costs
+    cost_storage_cap:
+      data: 239.01
+      index: monetary
+      dims: costs
+    comment: 'Stationary battery: one-way efficiency 0.9539 (round trip 0.910); up to 4000 kWh and 1 kW
+      per kWh.'
+  battery_lithium_ion_household:
+    base_tech: storage
+    name: Stationary home battery (lithium-ion) (household)
+    color: '#7E57C2'
+    carrier_in: electricity
+    carrier_out: electricity
+    flow_in_eff: 0.9028
+    flow_out_eff: 0.9028
+    flow_cap_max:
+      data: 10.0
+      index: electricity
+      dims: carriers
+    lifetime: 15
+    storage_cap_max: 20.0
+    flow_cap_per_storage_cap_max: 0.5
+    storage_loss: 4.1667e-05
+    cost_interest_rate:
+      data: 0.0225
+      index: monetary
+      dims: costs
+    cost_storage_cap:
+      data: 521.97
+      index: monetary
+      dims: costs
+    comment: 'Stationary battery: one-way efficiency 0.9028 (round trip 0.815); up to 20 kWh and 0.5 kW
+      per kWh.'
   boiler_biomass_building:
     base_tech: conversion
     name: Biomass (wood pellet) boiler (building)
@@ -511,6 +579,108 @@ techs:
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  ev_battery_household:
+    base_tech: storage
+    name: EV traction battery (household)
+    color: '#1B5E20'
+    carrier_in: ev_electricity
+    carrier_out: ev_electricity
+    flow_in_eff: 1.0
+    flow_out_eff: 1.0
+    flow_cap_max:
+      data: 50.0
+      index: ev_electricity
+      dims: carriers
+    lifetime: 15
+    storage_cap_max: 60.0
+    storage_cap_min: 60.0
+    storage_discharge_depth: 0.1
+    comment: Vehicle battery, 60 kWh; no investment cost (bought for mobility).
+  ev_charger_ac_household:
+    base_tech: conversion
+    name: EV home charger (AC wallbox) (household)
+    color: '#3FA34D'
+    carrier_in: electricity
+    carrier_out: ev_electricity
+    flow_in_eff: 1.0
+    flow_out_eff: 0.92
+    flow_cap_max:
+      data: 11.0
+      index: ev_electricity
+      dims: carriers
+    lifetime: 15
+    cost_flow_cap:
+      data: 150.26
+      index:
+        -   - monetary
+            - ev_electricity
+      dims:
+        - costs
+        - carriers
+    cost_interest_rate:
+      data: 0.0225
+      index: monetary
+      dims: costs
+    comment: 'Charger, efficiency=0.92. Only operates while the car is connected: bound by flow_out_max_relative
+      (scenario data).'
+  ev_charger_dc_community:
+    base_tech: conversion
+    name: EV fast-charging hub (DC) (community)
+    color: '#2E7D32'
+    carrier_in: electricity
+    carrier_out: ev_electricity
+    flow_in_eff: 1.0
+    flow_out_eff: 0.93
+    flow_cap_max:
+      data: 1000.0
+      index: ev_electricity
+      dims: carriers
+    lifetime: 10
+    cost_flow_cap:
+      data: 204.25
+      index:
+        -   - monetary
+            - ev_electricity
+      dims:
+        - costs
+        - carriers
+    cost_interest_rate:
+      data: 0.0225
+      index: monetary
+      dims: costs
+    comment: 'Charger, efficiency=0.93. Only operates while the car is connected: bound by flow_out_max_relative
+      (scenario data).'
+  ev_v2g_household:
+    base_tech: conversion
+    name: EV vehicle-to-grid discharger (bidirectional charger) (household)
+    color: '#81C784'
+    carrier_in: ev_electricity
+    carrier_out: electricity
+    flow_in_eff: 1.0
+    flow_out_eff: 0.9
+    flow_cap_max:
+      data: 11.0
+      index: electricity
+      dims: carriers
+    lifetime: 15
+    cost_flow_cap:
+      data: 350.0
+      index:
+        -   - monetary
+            - electricity
+      dims:
+        - costs
+        - carriers
+    cost_flow_out:
+      data: 0.04576
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.0225
+      index: monetary
+      dims: costs
+    comment: 'Vehicle-to-grid discharger, efficiency=0.90. Only operates while the car is connected: bound
+      by flow_out_max_relative (scenario data).'
   heat_pump_electric_building:
     base_tech: conversion
     name: Air-source electric heat pump (building)
@@ -807,3 +977,37 @@ techs:
       flow_in_eff/flow_out_eff fixes their ratios for this linear-efficiency use case. Genuinely 
       alternative/either-or carriers would need hand-written user-defined math 
       (carrier_tiers/carrier_ratios were removed from the base schema in this Calliope version).
+  pv_rooftop_household:
+    base_tech: supply
+    name: Rooftop photovoltaics (household)
+    color: '#F9C80E'
+    carrier_out: electricity
+    flow_out_eff: 1.0
+    source_unit: per_cap
+    flow_cap_max:
+      data: 20.0
+      index: electricity
+      dims: carriers
+    lifetime: 25
+    cost_flow_cap:
+      data: 2217.39
+      index:
+        -   - monetary
+            - electricity
+      dims:
+        - costs
+        - carriers
+    cost_om_annual:
+      data: 20.76
+      index:
+        -   - monetary
+            - electricity
+      dims:
+        - costs
+        - carriers
+    cost_interest_rate:
+      data: 0.0225
+      index: monetary
+      dims: costs
+    comment: Rooftop PV; flow_cap = DC kWp. source_use_max (scenario data) is the PVWatts v8 AC 
+      output per kWp, losses already applied, so flow_out_eff = 1.

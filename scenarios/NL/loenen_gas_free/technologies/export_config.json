@@ -19,7 +19,14 @@
     "chiller_absorption_community",
     "chiller_heat_pump_reversible_household",
     "chiller_heat_pump_reversible_building",
-    "chiller_heat_pump_reversible_community"
+    "chiller_heat_pump_reversible_community",
+    "ev_charger_ac_household",
+    "ev_battery_household",
+    "ev_v2g_household",
+    "ev_charger_dc_community",
+    "battery_lithium_ion_household",
+    "battery_lithium_ion_community",
+    "pv_rooftop_household"
   ],
   "schema": "modern",
   "output_dir": "scenarios/NL/loenen_gas_free/technologies/export"

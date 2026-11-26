@@ -52,3 +52,23 @@ techs:
       data: 0.0
       index: monetary
       dims: costs
+  demand_ev_driving:
+    base_tech: demand
+    name: EV driving energy (drawn from the car's battery)
+    carrier_in: ev_electricity
+    comment: sink_use_equals = Phase 1's ev_drive_kW (occupancy's ev_drive_kwh, battery side). Because it is met from the battery, the charge needed before each trip is enforced without an explicit departure-SOC constraint.
+  supply_ev_away:
+    base_tech: supply
+    name: EV charging away from home (workplace / public)
+    carrier_out: ev_electricity
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.0
+      index: monetary
+      dims: costs
+    comment: "source_use_equals = Phase 1's ev_away_kW (grid side) x the DC charger's efficiency: a fixed amount reaching the battery while the car is away (energy_prices.csv note)."
+  demand_ev_uncontrolled:
+    base_tech: demand
+    name: EV home charging, uncontrolled (baseline variant)
+    carrier_in: electricity
+    comment: "sink_use_equals = Phase 1's ev_kW: occupancy's charging on plug-in, no flexibility. Used only by solve_single_building.py --ev-uncontrolled, in place of the EV charger/battery/driving/away techs."

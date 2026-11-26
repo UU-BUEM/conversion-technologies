@@ -1,0 +1,50 @@
+data_tables:
+  loenen_demand_heat:
+    table: nodes_day_ahead/demand_heat.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_heat
+      inputs: sink_use_equals
+  loenen_demand_elec:
+    table: nodes_day_ahead/demand_elec.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_elec
+      inputs: sink_use_equals
+  loenen_demand_cool:
+    table: nodes_day_ahead/demand_cool.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_cool
+      inputs: sink_use_equals
+  loenen_ev_availability:
+    table: nodes_day_ahead/ev_plugged_in.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: ev_charger_ac_household
+      inputs: flow_out_max_relative
+  loenen_ev_driving:
+    table: nodes_day_ahead/ev_drive.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_ev_driving
+      inputs: sink_use_equals
+  loenen_ev_away:
+    table: nodes_day_ahead/ev_away.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: supply_ev_away
+      inputs: source_use_equals
+  loenen_grid_price:
+    table: nodes_day_ahead/grid_price.csv
+    rows: timesteps
+    add_dims:
+      techs: supply_grid_electricity
+      inputs: cost_flow_out
+      costs: monetary

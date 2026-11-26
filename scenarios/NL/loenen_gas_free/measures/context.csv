@@ -1,0 +1,14 @@
+key,value,source_url,notes
+cooperative_legal_form,"Energie Coöperatie Loenen U.A., founded 9 May 2019, KvK 76719588",https://loenenenergie.nl/cooperatie/,Members own it; general meeting decides.
+foundation_legal_form,"Stichting Loenen Energie Neutraal (LEN), founded 2014",https://loenenenergie.nl/over-loenen-energie-neutraal/,Grew out of the 2013 'Energieke dorpen' competition; runs the Loenens Energie Fonds (LEF).
+predecessor,"Stichting Duurzame Projecten Loenen (DPL, 2017-2025), projects and funds transferred to ECL and LEF",https://loenenenergie.nl/nieuws/page/3/,News item 27 mei 2025.
+cooperative_members_share,circa 10% of Loenen's residents are ECL members,https://zoek.officielebekendmakingen.nl/gmb-2026-355914.pdf,Absolute member count not published.
+membership_fee_eur_per_year,10,https://loenenenergie.nl/cooperatie/lidmaatschap/,Exempt for OM energy customers.
+households_in_loenen,,,"Not on the site. Scenario's own count: 1,335 residential buildings (1,260 single-dwelling) from 3D BAG via buem."
+energy_community_size,~200 households,,User-provided planning figure (2026-11-25); not from the site.
+target_energy_neutral,Volledige energie-neutraliteit voor Loenen op uiterlijk 1-1-2050,https://loenenenergie.nl/over-loenen-energie-neutraal/,
+target_gas_free,"Wijk van de Toekomst: aardgasvrij(-ready), 'stap-voor-stap', no target year",https://loenenenergie.nl/activiteit/bewonersbijeenkomst-loenen-aardgasvrij/,The van-het-gas-af page quotes a Gelderland goal of homes largely gas-free by 2030.
+net_metering_end,2027-01-01,https://loenenenergie.nl/activiteit/bewonersavond-einde-salderingsregeling/,See docs/tariffs_nl_2027.md. The site's FAQ still says net metering was extended to 2023 (outdated).
+grid_operator,Liander (Alliander),https://loenenenergie.nl/de-centrale/,
+grid_congestion,"Qualitative only: 'ons elektriciteitsnet zit vol'",https://loenenenergie.nl/cooperatie/,No figures. A reason for the battery and the flexibility projects.
+partners,"Dorpsraad Loenen; Veluwonen; gemeente Apeldoorn; Provincie Gelderland; Liander; Interreg NWE; Rabobank; OM; TU Eindhoven (SmartCORE); Ecopowercell; deA (energy coaches); REScoop.eu; Energie Samen",https://loenenenergie.nl/cooperatie/,Collected across several pages.

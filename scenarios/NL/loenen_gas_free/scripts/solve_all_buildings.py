@@ -10,6 +10,7 @@ construction (no shared state, no coordination needed between workers).
 Usage (from the scenario root, scenarios/NL/loenen_gas_free/):
     python scripts/solve_all_buildings.py --workers 16
     python scripts/solve_all_buildings.py --workers 16 --limit 50  # smoke test
+    python scripts/solve_all_buildings.py --workers 16 --ev uncontrolled  # EV baseline
     python scripts/solve_all_buildings.py --workers 12 --no-cooling         --out outputs/heating_only/all_buildings_results.json         --per-building-dir outputs/heating_only/per_building
 """
 
@@ -22,23 +23,36 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 from ruamel.yaml import YAML
-
-from solve_single_building import SCENARIO_ROOT, solve
+from solve_single_building import EV_VARIANTS, SCENARIO_ROOT, solve
 
 _yaml = YAML()
 
 
-def _all_building_ids() -> list[str]:
-    nodes_full = _yaml.load((SCENARIO_ROOT / "nodes/nodes.yaml").open(encoding="utf-8"))
+def _all_building_ids(nodes_dir: str = "nodes") -> list[str]:
+    nodes_full = _yaml.load(
+        (SCENARIO_ROOT / nodes_dir / "nodes.yaml").open(encoding="utf-8")
+    )
     return list(nodes_full["nodes"].keys())
 
 
 def _solve_one(
-    building: str, per_building_dir: Path, cooling: bool, biomass: bool = True
+    building: str,
+    per_building_dir: Path,
+    cooling: bool,
+    biomass: bool = True,
+    ev: str = "smart",
+    nodes_dir: str = "nodes",
 ) -> dict:
     work_dir = per_building_dir / building / "_model"
     try:
-        return solve(building, work_dir, cooling=cooling, biomass=biomass)
+        return solve(
+            building,
+            work_dir,
+            cooling=cooling,
+            biomass=biomass,
+            ev=ev,
+            nodes_dir=nodes_dir,
+        )
     except Exception as exc:  # noqa: BLE001 -- one building's failure must not kill the batch
         return {"building": building, "error": f"{type(exc).__name__}: {exc}"}
 
@@ -72,9 +86,20 @@ def main() -> None:
     parser.add_argument(
         "--no-biomass", action="store_true", help="All-electric variant (drop biomass)"
     )
+    parser.add_argument(
+        "--ev",
+        choices=EV_VARIANTS,
+        default="smart",
+        help="EV variant for buildings that have one (default: smart charging)",
+    )
+    parser.add_argument(
+        "--nodes-dir",
+        default="nodes",
+        help="build_nodes.py output folder under the scenario root (default: nodes)",
+    )
     args = parser.parse_args()
 
-    buildings = _all_building_ids()
+    buildings = _all_building_ids(args.nodes_dir)
     if args.limit:
         buildings = buildings[: args.limit]
 
@@ -90,6 +115,8 @@ def main() -> None:
                 args.per_building_dir,
                 not args.no_cooling,
                 not args.no_biomass,
+                args.ev,
+                args.nodes_dir,
             ): b
             for b in buildings
         }
@@ -107,8 +134,10 @@ def main() -> None:
     elapsed = time.time() - t0
     region_total_cost = sum(r["total_cost"] for r in results)
     summary = {
+        "nodes_dir": args.nodes_dir,
         "variant": ("heating_only" if args.no_cooling else "heating_and_cooling")
-        + ("_no_biomass" if args.no_biomass else ""),
+        + ("_no_biomass" if args.no_biomass else "")
+        + ("" if args.ev == "smart" else f"_ev_{args.ev}"),
         "n_buildings_requested": len(buildings),
         "n_solved": len(results),
         "n_failed": len(failures),

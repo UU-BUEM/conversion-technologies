@@ -39,6 +39,19 @@ SCENARIO_ROOT = Path(__file__).resolve().parent.parent
 _pre = argparse.ArgumentParser(add_help=False)
 _pre.add_argument("--buem-root", type=Path, default=Path("D:/test/buem"))
 _pre.add_argument("--cooling-setpoint", type=float, default=26.0)
+# Step 2 (energy community): a retrofit copy of the region from
+# build_retrofit_region.py, and a different building list (e.g. the
+# multi-unit and service buildings that load the grid).
+_pre.add_argument("--region-dir", type=Path, default=None)
+_pre.add_argument(
+    "--ids-file",
+    type=Path,
+    default=SCENARIO_ROOT / "data/loenen_single_dwelling_ids.txt",
+)
+# Summer window ventilation (buem n_air_window_max, 1/h extra air change by
+# opening windows when the outdoor air is at or below the heating setpoint).
+# buem's own default is 0 (off); see docs/phase8_demand_supply.md.
+_pre.add_argument("--window-ach", type=float, default=0.0)
 _known, _rest = _pre.parse_known_args()
 
 # --- must run before ANY buem import (also in spawned pool workers) --------
@@ -50,16 +63,26 @@ _registry.DEFAULT_COMFORT_T_UB = _known.cooling_setpoint
 import buem.config.cfg_attribute as _cfg_attribute  # noqa: E402
 import run_region_hourly  # noqa: E402  (buem/scripts/run_region_hourly.py)
 
+if "n_air_window_max" not in _cfg_attribute.ATTRIBUTE_SPECS:
+    raise RuntimeError("this buem has no n_air_window_max (window ventilation)")
+_cfg_attribute.ATTRIBUTE_SPECS["n_air_window_max"].default = _known.window_ach
+_cfg_attribute.cfg["n_air_window_max"] = _known.window_ach
+
 
 def main() -> None:
+    print(f"buem n_air_window_max default = {_known.window_ach} 1/h")
     applied = _cfg_attribute.ATTRIBUTE_SPECS["comfortT_ub"].default
     if applied != _known.cooling_setpoint:
         raise RuntimeError(
             f"cooling setpoint override did not take effect (buem uses {applied})"
         )
     print(f"buem comfortT_ub default = {applied} degC (buem's own default: 21.0)")
-    region = _known.buem_root / "src/buem/data/buildings/netherlands/Loenen"
-    ids = SCENARIO_ROOT / "data/loenen_single_dwelling_ids.txt"
+    region = _known.region_dir or (
+        _known.buem_root / "src/buem/data/buildings/netherlands/Loenen"
+    )
+    ids = _known.ids_file
+    print(f"region data: {region}")
+    print(f"building ids: {ids}")
     argv = [
         "--data-dir",
         str(region),

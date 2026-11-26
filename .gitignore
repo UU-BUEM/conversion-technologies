@@ -86,3 +86,6 @@ scenarios/*/*/nodes/*.csv
 # Scratch venvs used for local checks (not the project's real environment)
 .venv_scenario_check/
 .venv_calliope_check/
+
+# Per-node demand tables of other node sets (e.g. nodes_day_ahead/), same reason
+scenarios/*/*/nodes_*/*.csv

@@ -34,6 +34,10 @@ SCENARIO_ROOT = Path(__file__).resolve().parent.parent
 _TECHS_EXPORT_PATH = SCENARIO_ROOT / "technologies/export/loenen_gas_free_techs.yaml"
 
 _ENERGY_PRICES_PATH = SCENARIO_ROOT / "energy_prices.csv"
+# Hourly grid price (scripts/build_grid_price.py): the flat Eurostat price
+# plus the 2018 NL day-ahead price's hourly deviation from its mean.
+_GRID_PRICE_PATH = SCENARIO_ROOT / "grid_price_nl_2018.csv"
+GRID_PRICE_CHOICES = ("day_ahead", "flat")
 
 # Technologies whose catalogue cost is only a *proxy* taken from a much
 # larger plant (household/building biomass CHP from DEA's 3 MW_e pellet
@@ -77,6 +81,40 @@ _BUILDING_CHILLER_TECH_IDS = [
     "chiller_electric_building",
     "chiller_heat_pump_reversible_building",
 ]
+
+# Electric vehicles (docs/phase6_ev.md). Only nodes whose household owns an
+# EV in the Phase 1 data (buem/occupancy, 20% ownership for Loenen) get
+# them: the home charger (availability-bound, capacity fixed to the
+# household's existing wallbox), the car's battery, the
+# driving demand and the away-from-home charging, all on the
+# ev_electricity carrier. The V2G discharger and the uncontrolled-charging
+# baseline are variants switched on by solve_single_building.py.
+_EV_CHARGER = "ev_charger_ac_household"
+_EV_BATTERY = "ev_battery_household"
+_EV_V2G = "ev_v2g_household"
+# Read only for its charging efficiency (what reaches the battery when the
+# car charges away from home); never placed at a node.
+_EV_AWAY_CHARGER = "ev_charger_dc_community"
+_EV_NODE_TECH_IDS = [_EV_CHARGER, _EV_BATTERY, "demand_ev_driving", "supply_ev_away"]
+# Columns Phase 1 writes for the EV (buem scripts/run_region_hourly.py).
+_EV_COLUMNS = ["ev_kW", "ev_plugged_in", "ev_drive_kW", "ev_away_kW"]
+# Battery energy at the end of each hour (occupancy's simulated car), when
+# Phase 1 exported it. The model's battery then starts the year at the
+# simulated car's level (storage_initial, cyclic_storage false) and must end
+# it at least at the simulated level (storage_final_min, custom math in
+# conversion-technologies' calliope_export/storage_math.py). The simulated
+# year is then itself a feasible solution, and smart and uncontrolled
+# charging describe exactly the same car. Without the column the battery is
+# cyclic with a free starting level. Never combine cyclic_storage with
+# storage_initial: that forces the battery to the starting level in the
+# year's last hour too, infeasible for a household whose car is away, or low
+# and unplugged, on the evening of 31 December (48 households in the first
+# full run).
+_EV_STORED_COLUMN = "ev_stored_kWh"
+# Slack on the final level, kWh: the hourly series pass through float32 CSV
+# values, so the simulated year reproduces its own end level only to about
+# 1e-3 kWh.
+_EV_FINAL_LEVEL_SLACK_KWH = 0.01
 
 _yaml = YAML()
 _yaml.default_flow_style = False
@@ -139,7 +177,33 @@ def _household_cool_cap_total() -> float:
     return sum(_cap(techs[tech_id]) for tech_id in _HOUSEHOLD_CHILLER_TECH_IDS)
 
 
-def build(hourly_parquet: Path, out_dir: Path) -> None:
+def _flow_out_eff(tech_id: str) -> float:
+    """A single-output tech's ``flow_out_eff`` from this scenario's export."""
+    techs = _yaml.load(_TECHS_EXPORT_PATH.open(encoding="utf-8"))["techs"]
+    return float(techs[tech_id]["flow_out_eff"])
+
+
+def _storage_cap(tech_id: str) -> float:
+    """A storage tech's fixed capacity (``storage_cap_max``, kWh)."""
+    techs = _yaml.load(_TECHS_EXPORT_PATH.open(encoding="utf-8"))["techs"]
+    return float(techs[tech_id]["storage_cap_max"])
+
+
+def _ev_wide(df: pd.DataFrame, column: str, ev_nodes: list[str]) -> pd.DataFrame:
+    wide = df.pivot(index="time", columns="building_feature_id", values=column)
+    wide.columns = [f"bldg_{c}" for c in wide.columns]
+    wide.index.name = "timesteps"
+    return wide[ev_nodes]
+
+
+def build(hourly_parquet: Path, out_dir: Path, grid_price: str = "day_ahead") -> None:
+    if grid_price not in GRID_PRICE_CHOICES:
+        raise ValueError(f"grid_price must be one of {GRID_PRICE_CHOICES}")
+    import pyarrow.parquet as pq
+
+    available = set(pq.read_schema(hourly_parquet).names)
+    has_ev_columns = all(c in available for c in _EV_COLUMNS)
+    has_ev_stored = has_ev_columns and _EV_STORED_COLUMN in available
     df = pd.read_parquet(
         hourly_parquet,
         columns=[
@@ -149,6 +213,8 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
             "dhw_kW",
             "elec_kW",
             "Q_cool_kW",
+            *(_EV_COLUMNS if has_ev_columns else []),
+            *([_EV_STORED_COLUMN] if has_ev_stored else []),
         ],
     )
     df["heat_kW"] = df["Q_heat_kW"] + df["dhw_kW"]
@@ -237,12 +303,25 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
                 "name": "Grid electricity import",
                 "carrier_out": "electricity",
                 "flow_cap_max": 1e6,
-                "cost_flow_out": {
-                    "data": prices["supply_grid_electricity"],
-                    "index": "monetary",
-                    "dims": "costs",
-                },
-                "comment": "EUR/kWh; Eurostat nrg_pc_204, NL household band DC, excl. taxes and levies, 2025 mean (energy_prices.csv).",
+                **(
+                    {
+                        "cost_flow_out": {
+                            "data": prices["supply_grid_electricity"],
+                            "index": "monetary",
+                            "dims": "costs",
+                        },
+                        "comment": "EUR/kWh; Eurostat nrg_pc_204, NL household band DC, excl. taxes and levies, 2025 mean (energy_prices.csv).",
+                    }
+                    if grid_price == "flat"
+                    else {
+                        "comment": (
+                            "cost_flow_out is hourly, from the loenen_grid_price data "
+                            "table: Eurostat flat price (energy_prices.csv) + the 2018 NL "
+                            "day-ahead price's deviation from its mean "
+                            "(grid_price_nl_2018.csv, scripts/build_grid_price.py)."
+                        ),
+                    }
+                ),
             },
             "supply_biomass": {
                 "base_tech": "supply",
@@ -277,6 +356,44 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
                     "index": "monetary",
                     "dims": "costs",
                 },
+            },
+            "demand_ev_driving": {
+                "base_tech": "demand",
+                "name": "EV driving energy (drawn from the car's battery)",
+                "carrier_in": "ev_electricity",
+                "comment": (
+                    "sink_use_equals = Phase 1's ev_drive_kW (occupancy's "
+                    "ev_drive_kwh, battery side). Because it is met from the "
+                    "battery, the charge needed before each trip is enforced "
+                    "without an explicit departure-SOC constraint."
+                ),
+            },
+            "supply_ev_away": {
+                "base_tech": "supply",
+                "name": "EV charging away from home (workplace / public)",
+                "carrier_out": "ev_electricity",
+                "flow_cap_max": 1e6,
+                "cost_flow_out": {
+                    "data": prices["supply_ev_away"],
+                    "index": "monetary",
+                    "dims": "costs",
+                },
+                "comment": (
+                    "source_use_equals = Phase 1's ev_away_kW (grid side) x the "
+                    "DC charger's efficiency: a fixed amount reaching the "
+                    "battery while the car is away (energy_prices.csv note)."
+                ),
+            },
+            "demand_ev_uncontrolled": {
+                "base_tech": "demand",
+                "name": "EV home charging, uncontrolled (baseline variant)",
+                "carrier_in": "electricity",
+                "comment": (
+                    "sink_use_equals = Phase 1's ev_kW: occupancy's charging on "
+                    "plug-in, no flexibility. Used only by solve_single_building.py "
+                    "--ev-uncontrolled, in place of the EV charger/battery/"
+                    "driving/away techs."
+                ),
             },
         }
     }
@@ -327,6 +444,87 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
             f"techs for those nodes too: {len(oversized_cool_nodes)} node(s)"
         )
 
+    # Electric vehicles: only nodes whose household owns one in Phase 1.
+    ev_nodes: list[str] = []
+    ev_tables: dict[str, pd.DataFrame] = {}
+    ev_node_techs: dict[str, dict] = {}
+    if has_ev_columns:
+        drive_by_node = df.groupby("building_feature_id")["ev_drive_kW"].sum()
+        ev_nodes = sorted(f"bldg_{b}" for b, v in drive_by_node.items() if v > 0)
+        charger_eff = _flow_out_eff(_EV_CHARGER)
+        away_eff = _flow_out_eff(_EV_AWAY_CHARGER)
+        charging = _ev_wide(df, "ev_kW", ev_nodes)
+        ev_tables = {
+            "ev_plugged_in": _ev_wide(df, "ev_plugged_in", ev_nodes),
+            "ev_drive": _ev_wide(df, "ev_drive_kW", ev_nodes),
+            "ev_away": _ev_wide(df, "ev_away_kW", ev_nodes) * away_eff,
+            "ev_uncontrolled": charging,
+        }
+        battery_cap = _storage_cap(_EV_BATTERY)
+        if has_ev_stored:
+            stored = _ev_wide(df, _EV_STORED_COLUMN, ev_nodes)
+            # Level before the first hour = level after it minus that
+            # hour's net inflow (home charging and away charging on the
+            # battery side, minus driving): the battery balance Calliope
+            # uses, which occupancy's simulation closes exactly.
+            first_net = (
+                charging.iloc[0] * charger_eff
+                + ev_tables["ev_away"].iloc[0]
+                - ev_tables["ev_drive"].iloc[0]
+            )
+            start_kwh = stored.iloc[0] - first_net
+            end_kwh = stored.iloc[-1] - _EV_FINAL_LEVEL_SLACK_KWH
+        for node in ev_nodes:
+            # The household's existing wallbox, from its own uncontrolled
+            # charging peak (grid side), converted to the car side the
+            # export's capacity is measured on: fixed, not optimised.
+            car_side_kw = round(float(charging[node].max()) * charger_eff, 4)
+            capacity = {
+                "data": car_side_kw,
+                "index": "ev_electricity",
+                "dims": "carriers",
+            }
+            # The wallbox already exists (the uncontrolled baseline charges
+            # through it too), so its investment is sunk: zero it here, or
+            # only the smart variant would pay for it and look ~EUR 80/yr
+            # dearer than the baseline for the same charger.
+            sunk = {
+                "data": 0,
+                "index": [["monetary", "ev_electricity"]],
+                "dims": ["costs", "carriers"],
+            }
+            ev_node_techs[node] = {
+                _EV_CHARGER: {
+                    "flow_cap_min": capacity,
+                    "flow_cap_max": dict(capacity),
+                    "cost_flow_cap": sunk,
+                },
+                _EV_BATTERY: (
+                    {
+                        "cyclic_storage": False,
+                        "storage_initial": round(
+                            float(start_kwh[node]) / battery_cap, 8
+                        ),
+                        "storage_final_min": round(
+                            max(float(end_kwh[node]), 0.0) / battery_cap, 8
+                        ),
+                    }
+                    if has_ev_stored
+                    else {"cyclic_storage": True}
+                ),
+                "demand_ev_driving": {},
+                "supply_ev_away": {},
+            }
+        print(f"{len(ev_nodes)} of {len(node_names)} node(s) have an electric vehicle")
+        print(
+            "EV battery start/end: "
+            + (
+                "simulated car's levels (storage_initial, storage_final_min)"
+                if has_ev_stored
+                else "cyclic, free start (Phase 1 has no ev_stored_kWh)"
+            )
+        )
+
     nodes = {
         "nodes": {
             node: {
@@ -347,12 +545,18 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
                         else {}
                     ),
                     **{tech_id: {} for tech_id in _SUPPLY_TECH_IDS},
+                    **ev_node_techs.get(node, {}),
                 }
             }
             for node in node_names
         }
     }
     _write_yaml(out_dir / "nodes.yaml", nodes)
+
+    ev_csvs: dict[str, Path] = {}
+    for name, table in ev_tables.items():
+        ev_csvs[name] = out_dir / f"{name}.csv"
+        table.to_csv(ev_csvs[name])
 
     # Real Calliope 0.7.0 data_tables schema (confirmed against calliope's
     # own bundled example_models/urban_scale/model.yaml, not guessed): the
@@ -384,6 +588,40 @@ def build(hourly_parquet: Path, out_dir: Path) -> None:
             },
         }
     }
+    if ev_nodes:
+        # Every availability-bound tech at a node needs this series: the
+        # custom math's default of 1 would otherwise let it run while the
+        # car is away. solve_single_building.py adds the same table for
+        # the V2G discharger when that variant is on.
+        for key, csv_name, tech, param in (
+            (
+                "loenen_ev_availability",
+                "ev_plugged_in",
+                _EV_CHARGER,
+                "flow_out_max_relative",
+            ),
+            ("loenen_ev_driving", "ev_drive", "demand_ev_driving", "sink_use_equals"),
+            ("loenen_ev_away", "ev_away", "supply_ev_away", "source_use_equals"),
+        ):
+            data_tables["data_tables"][key] = {
+                "table": f"{out_dir.name}/{ev_csvs[csv_name].name}",
+                "rows": "timesteps",
+                "columns": "nodes",
+                "add_dims": {"techs": tech, "inputs": param},
+            }
+    if grid_price == "day_ahead":
+        # One series for every node: no `columns`, so no node dimension.
+        price_csv = out_dir / "grid_price.csv"
+        pd.read_csv(_GRID_PRICE_PATH, index_col=0)[["cost_flow_out"]].to_csv(price_csv)
+        data_tables["data_tables"]["loenen_grid_price"] = {
+            "table": f"{out_dir.name}/{price_csv.name}",
+            "rows": "timesteps",
+            "add_dims": {
+                "techs": "supply_grid_electricity",
+                "inputs": "cost_flow_out",
+                "costs": "monetary",
+            },
+        }
     _write_yaml(out_dir / "data_tables.yaml", data_tables)
 
     print(f"Wrote {len(node_names)} nodes to {out_dir}")
@@ -402,8 +640,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hourly-parquet", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument(
+        "--grid-price",
+        choices=GRID_PRICE_CHOICES,
+        default="day_ahead",
+        help="Hourly NL day-ahead-shaped grid price (default) or the flat price (v3)",
+    )
     args = parser.parse_args()
-    build(args.hourly_parquet, args.out_dir)
+    build(args.hourly_parquet, args.out_dir, grid_price=args.grid_price)
 
 
 if __name__ == "__main__":

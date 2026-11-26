@@ -7,6 +7,15 @@ parameters:
     description: Fixed ratio of a technology's secondary output carrier flow to its primary output 
       carrier flow (e.g. CHP heat relative to its electricity output).
     default: 1
+  flow_out_max_relative:
+    description: Upper bound on a technology's output as a fraction of its capacity in each timestep
+      (0-1), e.g. the share of an hour an electric vehicle is connected to its charger.
+    default: 1
+  storage_final_min:
+    description: Minimum stored level in the last timestep, as a fraction of storage capacity (0-1);
+      0 = not set. For use with cyclic_storage false, e.g. so an EV battery ends the year at least 
+      where a simulated year ends.
+    default: 0
 constraints:
   link_flow_in_carriers:
     description: Ties each technology's secondary input carrier to its primary input carrier via 
@@ -96,3 +105,28 @@ constraints:
         expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
       - where: '[heat_pump_geothermal_household] in techs'
         expression: flow_out_inc_eff[carriers=heat] == flow_in_inc_eff[carriers=electricity]
+  flow_out_max_availability:
+    description: 'A technology with time-varying availability may only use the available share of its
+      capacity: flow_out <= flow_cap x timestep_resolution x flow_out_max_relative.'
+    foreach:
+      - nodes
+      - techs
+      - carriers
+      - timesteps
+    where: carrier_out AND [ev_charger_ac_household, ev_charger_dc_community, ev_v2g_household] in 
+      techs
+    equations:
+      - expression: flow_out <= flow_cap * timestep_resolution * flow_out_max_relative
+  storage_final_level_min:
+    description: A storage technology must end the model period with at least storage_final_min x 
+      storage_cap stored.
+    foreach:
+      - nodes
+      - techs
+    where: storage AND storage_final_min AND [battery_lithium_ion_community, 
+      battery_lithium_ion_household, ev_battery_household] in techs
+    equations:
+      - expression: storage[timesteps=$final_step] >= storage_final_min * storage_cap
+    slices:
+      final_step:
+        - expression: get_val_at_index(timesteps=-1)

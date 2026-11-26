@@ -20,3 +20,24 @@ data_tables:
     add_dims:
       techs: demand_cool
       inputs: sink_use_equals
+  loenen_ev_availability:
+    table: nodes/ev_plugged_in.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: ev_charger_ac_household
+      inputs: flow_out_max_relative
+  loenen_ev_driving:
+    table: nodes/ev_drive.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: demand_ev_driving
+      inputs: sink_use_equals
+  loenen_ev_away:
+    table: nodes/ev_away.csv
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      techs: supply_ev_away
+      inputs: source_use_equals

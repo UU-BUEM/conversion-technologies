@@ -42,4 +42,12 @@ dependencies:
   - pip:
       - ruamel.yaml>=0.18,<1 # same comment-preserving YAML writer conversion_env.yml uses
       - calliope==0.7.0 # decided target version (see note above)
-      - highspy # faster solver than CBC where a compatible pyomo/calliope pairing is confirmed -- see phase4b_solve_0610_sizing.md Finding 5 and the "0.7.0 + HiGHS" caveat in this scenario's docs
+      - highspy # HiGHS via Calliope 0.7.0's native backend (config.build.backend: highs), NOT via Pyomo: Pyomo's highs/appsi_highs interfaces fail on Calliope models -- see scenarios/NL/loenen_gas_free/docs/phase9_community_pilot.md "Solver"
+      # Grid model (energy-community step 1, scripts/build_grid.py; docs/phase7_grid.md).
+      # NOT pandapower: it pulls pandas<3 / older numpy into this Calliope env;
+      # power flow (step 3) gets its own environment.
+      - shapely
+      - pyproj
+      - networkx
+      - scipy
+      - pytest # scenarios/*/*/tests (not collected by the package's own pytest run)
