@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-26
+
+### Changed
+
+- **weather dependency back to UU-BUEM/weather** (`v1.11.0`), the module
+  EnerPlanET uses, instead of `enerplanet/weather` v2.5.0 (introduced in
+  v0.5.0). PV profiles call `get_point_weather(..., wind=True)`: PVWatts
+  needs the 10 m wind speed for the module temperature (not wind power).
+  `weather-cop` calls `get_point_weather(...)` and reads `T`. Same MERRA-2
+  archive, so the Loenen PV potential is identical (every roof's kWh/kWp
+  unchanged). Update an environment with
+  `conda env update -f infrastructure/env/conversion_env.yml`.
+
 ### Added
 
 - **Loenen community pilot results** (scenario only): full year, 20

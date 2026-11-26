@@ -265,7 +265,7 @@ then flexibility, then the community filter and Calliope. Changes:
 | --- | --- |
 | 0 | city2tabula / 3D BAG; `enerplanet/buem-gateway` (demand API) |
 | 1, 3 | `enerplanet/enerplanet-pylovo` (grid engine: generation, power flow, EV hosting) |
-| 2 | `enerplanet/buem`, `enerplanet/occupancy`, `enerplanet/weather`, `enerplanet/pysam-pv` |
+| 2 | `enerplanet/buem`, `enerplanet/occupancy`, `UU-BUEM/weather` (confirmed 2026-11-26), `enerplanet/pysam-pv` |
 | 6 | `enerplanet/simulation-engine` (Calliope; `calliope==0.7.0` decided) |
 | 7 | `simulation-engine` `c2p` (PyPSA) |
 | orchestration | `enerplanet/TentaCron` |

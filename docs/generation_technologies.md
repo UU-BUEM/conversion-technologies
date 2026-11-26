@@ -33,9 +33,12 @@ loader. Every value is traced in `docs/sources/parameter_sources.csv`.
   output (to 1e-12 kW), for four array set-ups, missing values and a leap
   year. The service rounds its capacity factors to 4 decimals; this
   package keeps full precision.
-- **Weather.** From the `weather` package's curated variables:
-  `get_point_weather(..., variables=["T", "DHI", "DNI", "WS_10M"])`
-  (weather >= 2.0). Nothing here downloads or derives weather. With an
+- **Weather.** From UU-BUEM [`weather`](https://github.com/UU-BUEM/weather) (the module EnerPlanET
+  uses): `get_point_weather(..., wind=True)` (weather >= 1.11) gives
+  `T`, `DHI`, `DNI` and the 10 m wind speed `WS_10M`. PVWatts uses the
+  wind speed only for the module temperature (it returns NaN without
+  it); nothing here models wind power. Nothing here downloads or
+  derives weather. With an
   older weather package, `fetch_weather` raises and asks for a weather
   DataFrame instead.
 - **Costs.** From [THD-Spatial-AI/OpenTech-DB](https://github.com/THD-Spatial-AI/OpenTech-DB)

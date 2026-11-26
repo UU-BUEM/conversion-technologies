@@ -2,8 +2,8 @@
 # Create:  conda env create -f infrastructure/env/conversion_env.yml
 # Update:  conda env update -f infrastructure/env/conversion_env.yml --prune
 #
-# weather (below, under pip:) is pinned to a release tag of the EnerPlanET
-# line (enerplanet/weather); bump the tag to follow a new release.
+# weather (below, under pip:) is pinned to a release tag of UU-BUEM/weather
+# (the module EnerPlanET uses); bump the tag to follow a new release.
 #
 # dask/netcdf4/xarray are weather[pointquery]'s own runtime dependencies,
 # listed explicitly here as conda packages rather than left for pip to
@@ -39,11 +39,11 @@ dependencies:
       - ruamel.yaml>=0.18,<1  # comment-preserving YAML writer for Calliope tech configs
       - ruff>=0.6
       - mypy>=1.8
-      # weather (https://github.com/enerplanet/weather, the EnerPlanET line,
-      # >= 2.0 for get_point_weather(..., variables=[...]) incl. wind):
+      # weather (https://github.com/UU-BUEM/weather, >= 1.11 for
+      # get_point_weather(..., wind=True), the PV module temperature):
       # compulsory -- heat pump COP and PV profiles come from its real
       # per-location fetch, no bundled/CSV fallback. Not published to
       # PyPI/conda yet, so a direct git reference (PEP 508), pinned to a
       # release tag. Its runtime dependencies (incl. pvlib for the `solar`
       # extra) are conda-installed above.
-      - weather[pointquery,solar] @ git+https://github.com/enerplanet/weather.git@v2.5.0
+      - weather[pointquery,solar] @ git+https://github.com/UU-BUEM/weather.git@v1.11.0

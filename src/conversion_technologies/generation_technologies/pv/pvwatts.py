@@ -19,8 +19,10 @@ there are the same numbers:
 ``tests/test_pv.py`` checks this against a pinned copy of pysam-pv's own
 ``simulate.py`` on its MERRA-2 2018 test weather.
 
-Weather comes from the ``weather`` package's curated variables
-(:func:`fetch_weather`); nothing here downloads or derives weather.
+Weather comes from the UU-BUEM ``weather`` package's
+``get_point_weather(..., wind=True)`` (:func:`fetch_weather`); the 10 m
+wind speed only sets the module temperature. Nothing here downloads or
+derives weather.
 """
 
 from __future__ import annotations
@@ -105,8 +107,8 @@ def fetch_weather(
     data_dir: str | Path | None = None,
 ) -> pd.DataFrame:
     """``T``, ``DHI``, ``DNI``, ``WS_10M`` for one location and year from the
-    ``weather`` package (its curated variables; ``get_point_weather(...,
-    variables=...)``, weather >= 2.0)."""
+    UU-BUEM ``weather`` package (``get_point_weather(..., wind=True)``,
+    weather >= 1.11: T, GHI, DHI, DNI plus the 10 m wind speed)."""
     from weather import get_point_weather
 
     try:
@@ -116,13 +118,14 @@ def fetch_weather(
             year,
             provider=provider,
             data_dir=data_dir,
-            variables=list(WEATHER_VARIABLES),
+            wind=True,
         )
     except TypeError as exc:
         raise ImportError(
-            "PV profiles need the weather package's variable selection "
-            "(get_point_weather(..., variables=...), weather >= 2.0) for "
-            "WS_10M; the installed weather is older. Pass a weather "
+            "PV profiles need the 10 m wind speed from the weather "
+            "package (get_point_weather(..., wind=True), weather >= 1.11) "
+            "for the module temperature; the installed weather is older. "
+            "Pass a weather "
             "DataFrame with T, DHI, DNI and WS_10M to pv_capacity_factors() "
             "instead."
         ) from exc

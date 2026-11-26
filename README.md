@@ -9,7 +9,7 @@ vehicle battery as storage) — from a single household up to a community
 scale.
 
 Part of the `UU-BUEM` sibling package family, alongside
-[`weather`](https://github.com/enerplanet/weather) and
+[`weather`](https://github.com/UU-BUEM/weather) and
 [`occupancy`](https://github.com/UU-BUEM/occupancy).
 
 ## What this does

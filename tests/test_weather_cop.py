@@ -78,10 +78,8 @@ def test_export_weather_cop_end_to_end(tmp_path: Path, monkeypatch) -> None:
         *,
         provider="era5-land",
         data_dir=None,
-        variables=None,
     ):
         calls["args"] = (latitude, longitude, year, provider, data_dir)
-        calls["variables"] = variables
         return _synthetic_weather_df(year)
 
     monkeypatch.setattr(
@@ -98,7 +96,6 @@ def test_export_weather_cop_end_to_end(tmp_path: Path, monkeypatch) -> None:
         year=2018,
     )
     assert calls["args"] == (52.09, 5.12, 2018, "era5-land", None)
-    assert calls["variables"] == ["T"]  # weather >= 2.0 requires naming them
     assert paths["flow_out_eff_csv"].exists()
     assert paths["flow_in_eff_csv"].exists()
     assert paths["data_tables_yaml"].exists()

@@ -247,7 +247,7 @@ def test_old_weather_package_gives_a_clear_error(monkeypatch):
         raise AssertionError("not reached")
 
     monkeypatch.setattr(weather_package, "get_point_weather", old_signature)
-    with pytest.raises(ImportError, match="weather >= 2.0"):
+    with pytest.raises(ImportError, match="weather >= 1.11"):
         pvwatts.fetch_weather(52.1, 5.2, 2018)
 
 

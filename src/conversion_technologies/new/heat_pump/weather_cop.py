@@ -176,10 +176,9 @@ def export_weather_cop(
     ambient_carrier = next(c for c in tech.carriers_in if c != tech.primary_carrier_in)
     row = _design_row(technology_id)
 
-    # weather >= 2.0 requires naming the variables (no default set); COP
-    # needs only the 2 m air temperature.
+    # COP needs only the 2 m air temperature (column T).
     weather_df = get_point_weather(
-        latitude, longitude, year, provider=provider, data_dir=data_dir, variables=["T"]
+        latitude, longitude, year, provider=provider, data_dir=data_dir
     )
     temperature_c = weather_df["T"]
 

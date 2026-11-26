@@ -282,9 +282,9 @@ catalog stays design-point-only by design (`.claude/heat_pump/resolved.md`
 "weather-integration-scope").
 
 The temperature series comes from the sibling
-[`weather`](https://github.com/enerplanet/weather) package's own
-`get_point_weather(latitude, longitude, year, provider="era5-land", variables=["T"],
-data_dir=None)` — a real per-location fetch of an already-processed archive
+[`weather`](https://github.com/UU-BUEM/weather) package's own
+`get_point_weather(latitude, longitude, year, provider="era5-land",
+data_dir=None)` (column `T`) — a real per-location fetch of an already-processed archive
 (it does not download/process data itself; raises `FileNotFoundError` if
 nothing's been processed yet for that `(provider, year)`). `weather` is a
 **compulsory** runtime dependency of this package (`pyproject.toml`,
