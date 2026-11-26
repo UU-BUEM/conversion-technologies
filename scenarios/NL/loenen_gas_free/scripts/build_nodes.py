@@ -38,6 +38,34 @@ _ENERGY_PRICES_PATH = SCENARIO_ROOT / "energy_prices.csv"
 # plus the 2018 NL day-ahead price's hourly deviation from its mean.
 _GRID_PRICE_PATH = SCENARIO_ROOT / "grid_price_nl_2018.csv"
 GRID_PRICE_CHOICES = ("day_ahead", "flat")
+# Hourly air-source heat pump COP from build_hp_cop.py (weather-cop CLI);
+# "design" keeps the fixed design-point COP of the tech export (v3/v4 runs).
+_HP_COP_DIR = SCENARIO_ROOT / "heat_pump_cop_2018"
+_HP_COP_TECHS = ("heat_pump_electric_household", "heat_pump_electric_building")
+COP_CHOICES = ("hourly", "design")
+# Calliope 0.7.0: a YAML value beats a data table, and an import can't
+# redefine a key, so the tech export's scalar design COP would mask the
+# hourly tables. This named override (written to cop_overrides.yaml, merged
+# into model.yaml, selected with read_yaml(..., scenario=...)) sets the
+# scalars to null so the tables apply. Checked on the pilot week: the
+# loaded flow_out_eff varies 2.97-3.84 with it, a flat 3.30 without.
+HOURLY_COP_SCENARIO = "hourly_cop"
+
+
+def cop_overrides() -> dict:
+    """The ``overrides:`` block that lets the hourly COP tables apply."""
+    techs = {
+        tech: {"flow_out_eff": None, "carrier_flow_ratio_in": None}
+        for tech in _HP_COP_TECHS
+    }
+    return {HOURLY_COP_SCENARIO: {"techs": techs}}
+
+
+def model_scenario(model_yaml: Path) -> str | None:
+    """The override to select when reading ``model_yaml`` (or None)."""
+    text = Path(model_yaml).read_text(encoding="utf-8")
+    return HOURLY_COP_SCENARIO if f"{HOURLY_COP_SCENARIO}:" in text else None
+
 
 # Technologies whose catalogue cost is only a *proxy* taken from a much
 # larger plant (household/building biomass CHP from DEA's 3 MW_e pellet
@@ -196,9 +224,16 @@ def _ev_wide(df: pd.DataFrame, column: str, ev_nodes: list[str]) -> pd.DataFrame
     return wide[ev_nodes]
 
 
-def build(hourly_parquet: Path, out_dir: Path, grid_price: str = "day_ahead") -> None:
+def build(
+    hourly_parquet: Path,
+    out_dir: Path,
+    grid_price: str = "day_ahead",
+    cop: str = "hourly",
+) -> None:
     if grid_price not in GRID_PRICE_CHOICES:
         raise ValueError(f"grid_price must be one of {GRID_PRICE_CHOICES}")
+    if cop not in COP_CHOICES:
+        raise ValueError(f"cop must be one of {COP_CHOICES}")
     import pyarrow.parquet as pq
 
     available = set(pq.read_schema(hourly_parquet).names)
@@ -622,6 +657,40 @@ def build(hourly_parquet: Path, out_dir: Path, grid_price: str = "day_ahead") ->
                 "costs": "monetary",
             },
         }
+    if cop == "hourly":
+        # One series per technology for every node (no `columns`, so no
+        # node dimension), as for the grid price. Both parameters must
+        # follow the hour: flow_out_eff[heat] = COP and
+        # carrier_flow_ratio_in = COP - 1 (the ratio math's ambient draw).
+        for tech in _HP_COP_TECHS:
+            for param, dims in (
+                ("flow_out_eff", {"carriers": "heat"}),
+                ("carrier_flow_ratio_in", {}),
+            ):
+                src = _HP_COP_DIR / f"{tech}_{param}.csv"
+                if not src.exists():
+                    raise FileNotFoundError(
+                        f"{src} missing: run scripts/build_hp_cop.py first "
+                        "(or build with --cop design)."
+                    )
+                series = pd.read_csv(src, index_col=0)
+                if list(series.index) != list(heat_wide.index.astype(str)):
+                    raise ValueError(
+                        f"{src.name}: timesteps differ from the demand "
+                        "tables (same weather year and hour stamps needed)."
+                    )
+                dst = out_dir / f"{tech}_{param}.csv"
+                series.to_csv(dst)
+                data_tables["data_tables"][f"loenen_{tech}_{param}"] = {
+                    "table": f"{out_dir.name}/{dst.name}",
+                    "rows": "timesteps",
+                    "add_dims": {"techs": tech, "inputs": param, **dims},
+                }
+    overrides_path = out_dir / "cop_overrides.yaml"
+    if cop == "hourly":
+        _write_yaml(overrides_path, {"overrides": cop_overrides()})
+    else:
+        overrides_path.unlink(missing_ok=True)
     _write_yaml(out_dir / "data_tables.yaml", data_tables)
 
     print(f"Wrote {len(node_names)} nodes to {out_dir}")
@@ -646,8 +715,14 @@ def main() -> None:
         default="day_ahead",
         help="Hourly NL day-ahead-shaped grid price (default) or the flat price (v3)",
     )
+    parser.add_argument(
+        "--cop",
+        choices=COP_CHOICES,
+        default="hourly",
+        help="Air-source heat pump COP: hourly from outdoor temperature (default, heat_pump_cop_2018/) or the fixed design point (v3/v4)",
+    )
     args = parser.parse_args()
-    build(args.hourly_parquet, args.out_dir, grid_price=args.grid_price)
+    build(args.hourly_parquet, args.out_dir, grid_price=args.grid_price, cop=args.cop)
 
 
 if __name__ == "__main__":

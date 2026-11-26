@@ -41,17 +41,19 @@ def test_compute_hourly_cop_rejects_an_out_of_bound_value() -> None:
 def test_build_cop_data_tables_shape() -> None:
     block = build_cop_data_tables(
         "heat_pump_electric_household",
-        "ambient_heat",
         flow_out_eff_csv="a.csv",
-        flow_in_eff_csv="b.csv",
+        carrier_flow_ratio_in_csv="b.csv",
     )
     tables = block["data_tables"]
     out_entry = tables["heat_pump_electric_household_flow_out_eff"]
-    in_entry = tables["heat_pump_electric_household_flow_in_eff"]
+    ratio_entry = tables["heat_pump_electric_household_carrier_flow_ratio_in"]
     assert out_entry["add_dims"]["carriers"] == "heat"
     assert out_entry["add_dims"]["inputs"] == "flow_out_eff"
-    assert in_entry["add_dims"]["carriers"] == "ambient_heat"
-    assert in_entry["add_dims"]["inputs"] == "flow_in_eff"
+    # The ratio math reads carrier_flow_ratio_in (COP - 1), per technology.
+    assert ratio_entry["add_dims"] == {
+        "techs": "heat_pump_electric_household",
+        "inputs": "carrier_flow_ratio_in",
+    }
     assert "nodes" not in out_entry["add_dims"]  # this package has no node concept
 
 
@@ -97,15 +99,17 @@ def test_export_weather_cop_end_to_end(tmp_path: Path, monkeypatch) -> None:
     )
     assert calls["args"] == (52.09, 5.12, 2018, "era5-land", None)
     assert paths["flow_out_eff_csv"].exists()
-    assert paths["flow_in_eff_csv"].exists()
+    assert paths["carrier_flow_ratio_in_csv"].exists()
     assert paths["data_tables_yaml"].exists()
 
     cop = pd.read_csv(paths["flow_out_eff_csv"], index_col=0)["flow_out_eff"]
     assert len(cop) == 8760
     assert (cop >= 1).all() and (cop <= 20).all()
 
-    flow_in = pd.read_csv(paths["flow_in_eff_csv"], index_col=0)["flow_in_eff"]
-    assert flow_in.iloc[0] == pytest.approx(cop.iloc[0] - 1.0)
+    ratio = pd.read_csv(paths["carrier_flow_ratio_in_csv"], index_col=0)[
+        "carrier_flow_ratio_in"
+    ]
+    assert ratio.iloc[0] == pytest.approx(cop.iloc[0] - 1.0)
 
 
 def test_export_weather_cop_rejects_a_non_heat_pump_id(

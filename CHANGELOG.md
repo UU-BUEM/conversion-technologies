@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `weather-cop` writes the hourly `carrier_flow_ratio_in` (COP - 1, the free
+  source heat per kWh of electricity that `ratio_math.py` reads) instead of
+  `flow_in_eff` on the ambient carrier, which that math ignores; output
+  `<id>_carrier_flow_ratio_in.csv`, `build_cop_data_tables(...,
+  carrier_flow_ratio_in_csv=...)`.
+
+### Added
+
+- **Loenen: hourly air-source heat pump COP** (scenario):
+  `scripts/build_hp_cop.py` (`weather-cop` CLI, MERRA-2 2018 at the demand
+  and PV weather point) -> `heat_pump_cop_2018/`; `build_nodes.py --cop
+  hourly` (default; `design` reproduces v3/v4) wires `flow_out_eff[heat]`
+  and `carrier_flow_ratio_in` per hour through the `hourly_cop` override
+  (Calliope 0.7.0 lets YAML values beat data tables). Pilot, full year:
+  air-source heat pumps now built; community EUR 59,834 vs independent
+  64,144 (sharing -6.7%). See `scenarios/NL/loenen_gas_free/docs/phase9_community_pilot.md`.
+
 ## [0.6.0] - 2026-11-26
 
 ### Changed

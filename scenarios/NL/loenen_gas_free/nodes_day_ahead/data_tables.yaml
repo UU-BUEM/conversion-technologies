@@ -48,3 +48,29 @@ data_tables:
       techs: supply_grid_electricity
       inputs: cost_flow_out
       costs: monetary
+  loenen_heat_pump_electric_household_flow_out_eff:
+    table: nodes_day_ahead/heat_pump_electric_household_flow_out_eff.csv
+    rows: timesteps
+    add_dims:
+      techs: heat_pump_electric_household
+      inputs: flow_out_eff
+      carriers: heat
+  loenen_heat_pump_electric_household_carrier_flow_ratio_in:
+    table: nodes_day_ahead/heat_pump_electric_household_carrier_flow_ratio_in.csv
+    rows: timesteps
+    add_dims:
+      techs: heat_pump_electric_household
+      inputs: carrier_flow_ratio_in
+  loenen_heat_pump_electric_building_flow_out_eff:
+    table: nodes_day_ahead/heat_pump_electric_building_flow_out_eff.csv
+    rows: timesteps
+    add_dims:
+      techs: heat_pump_electric_building
+      inputs: flow_out_eff
+      carriers: heat
+  loenen_heat_pump_electric_building_carrier_flow_ratio_in:
+    table: nodes_day_ahead/heat_pump_electric_building_carrier_flow_ratio_in.csv
+    rows: timesteps
+    add_dims:
+      techs: heat_pump_electric_building
+      inputs: carrier_flow_ratio_in

@@ -265,5 +265,7 @@ def test_weather_cop_command_writes_three_files(tmp_path: Path, monkeypatch) -> 
     )
     assert exit_code == 0
     assert (output_dir / "heat_pump_electric_household_flow_out_eff.csv").exists()
-    assert (output_dir / "heat_pump_electric_household_flow_in_eff.csv").exists()
+    assert (
+        output_dir / "heat_pump_electric_household_carrier_flow_ratio_in.csv"
+    ).exists()
     assert (output_dir / "heat_pump_electric_household_data_tables.yaml").exists()

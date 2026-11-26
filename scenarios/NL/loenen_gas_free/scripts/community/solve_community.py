@@ -13,11 +13,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
 import calliope
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import build_nodes  # noqa: E402
 
 # Not investment decisions: market techs, demands and lossless links have
 # placeholder capacities (1e6 kW supplies, 1000 kW links).
@@ -114,7 +119,10 @@ def solve_model(model_dir: Path) -> dict:
     """Build, solve and summarise ``model_dir/model.yaml``; writes
     ``results.json`` (and ``exchange_hourly.csv``) there."""
     t0 = time.time()
-    m = calliope.read_yaml(str(model_dir / "model.yaml"))
+    model_yaml = model_dir / "model.yaml"
+    m = calliope.read_yaml(
+        str(model_yaml), scenario=build_nodes.model_scenario(model_yaml)
+    )
     m.build()
     m.solve()
     # Calliope 0.7.0 keeps it on m.runtime, not on the results' attrs.

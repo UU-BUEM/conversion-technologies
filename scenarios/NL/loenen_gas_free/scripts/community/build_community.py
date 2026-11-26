@@ -303,6 +303,11 @@ def build(
             "data_tables.yaml",
         ],
     }
+    cop_overrides = out / "nodes" / "cop_overrides.yaml"
+    if cop_overrides.exists():  # hourly air-source heat pump COP
+        model["overrides"] = _yaml.load(cop_overrides.open(encoding="utf-8"))[
+            "overrides"
+        ]
     _write_yaml(out / "model.yaml", model)
     meta["members"] = list(members["node"])
     meta["pv_nodes"] = pv_nodes

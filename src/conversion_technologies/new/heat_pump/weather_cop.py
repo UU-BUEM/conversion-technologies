@@ -87,12 +87,19 @@ def _design_row(technology_id: str) -> dict[str, Any]:
 
 def build_cop_data_tables(
     technology_id: str,
-    ambient_carrier: str,
     *,
     flow_out_eff_csv: str,
-    flow_in_eff_csv: str,
+    carrier_flow_ratio_in_csv: str,
 ) -> dict[str, Any]:
     """The ``data_tables:`` YAML block referencing the two COP CSVs.
+
+    A heat pump's COP enters the model through two parameters, both of
+    which must follow the hour: ``flow_out_eff`` on ``heat`` (heat per
+    kWh of electricity, in ``balance_conversion_primary_carriers``) and
+    ``carrier_flow_ratio_in`` (free source heat per kWh of electricity,
+    COP - 1, in ``link_flow_in_carriers``; ``ratio_math.py``). The
+    ambient carrier's ``flow_in_eff`` is not read by that math, so it is
+    not varied here.
 
     Two single-value-column CSVs (one per parameter) rather than one shared
     multi-column file -- Calliope's ``data_tables`` column-selection syntax
@@ -125,13 +132,12 @@ def build_cop_data_tables(
                     "inputs": "flow_out_eff",
                 },
             },
-            f"{technology_id}_flow_in_eff": {
-                "table": flow_in_eff_csv,
+            f"{technology_id}_carrier_flow_ratio_in": {
+                "table": carrier_flow_ratio_in_csv,
                 "rows": "timesteps",
                 "add_dims": {
                     "techs": technology_id,
-                    "carriers": ambient_carrier,
-                    "inputs": "flow_in_eff",
+                    "inputs": "carrier_flow_ratio_in",
                 },
             },
         },
@@ -158,9 +164,11 @@ def export_weather_cop(
     computes the hourly COP (:func:`compute_hourly_cop`) using the design
     sink temperature and quality factor already in ``technologies.csv`` for
     ``technology_id``, and writes three files into ``output_dir``:
-    ``<id>_flow_out_eff.csv``, ``<id>_flow_in_eff.csv``,
+    ``<id>_flow_out_eff.csv`` (COP), ``<id>_carrier_flow_ratio_in.csv``
+    (COP - 1),
     ``<id>_data_tables.yaml``. Returns their paths, keyed
-    ``"flow_out_eff_csv"``/``"flow_in_eff_csv"``/``"data_tables_yaml"``.
+    ``"flow_out_eff_csv"``/``"carrier_flow_ratio_in_csv"``/
+    ``"data_tables_yaml"``.
 
     Raises ``ValueError`` if ``technology_id`` isn't registered or isn't
     heat-pump-shaped (exactly 2 input carriers: electricity + a free heat
@@ -173,7 +181,6 @@ def export_weather_cop(
             "weather_cop only applies to a heat pump (exactly 2: electricity "
             "+ a free heat source)."
         )
-    ambient_carrier = next(c for c in tech.carriers_in if c != tech.primary_carrier_in)
     row = _design_row(technology_id)
 
     # COP needs only the 2 m air temperature (column T).
@@ -192,22 +199,23 @@ def export_weather_cop(
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     flow_out_eff_path = out_dir / f"{technology_id}_flow_out_eff.csv"
-    flow_in_eff_path = out_dir / f"{technology_id}_flow_in_eff.csv"
+    ratio_path = out_dir / f"{technology_id}_carrier_flow_ratio_in.csv"
     data_tables_path = out_dir / f"{technology_id}_data_tables.yaml"
 
     cop.rename("flow_out_eff").rename_axis("timesteps").to_csv(flow_out_eff_path)
-    (cop - 1.0).rename("flow_in_eff").rename_axis("timesteps").to_csv(flow_in_eff_path)
+    (cop - 1.0).rename("carrier_flow_ratio_in").rename_axis("timesteps").to_csv(
+        ratio_path
+    )
 
     data_tables = build_cop_data_tables(
         technology_id,
-        ambient_carrier,
         flow_out_eff_csv=flow_out_eff_path.name,
-        flow_in_eff_csv=flow_in_eff_path.name,
+        carrier_flow_ratio_in_csv=ratio_path.name,
     )
     write_yaml_document(data_tables, data_tables_path)
 
     return {
         "flow_out_eff_csv": flow_out_eff_path,
-        "flow_in_eff_csv": flow_in_eff_path,
+        "carrier_flow_ratio_in_csv": ratio_path,
         "data_tables_yaml": data_tables_path,
     }

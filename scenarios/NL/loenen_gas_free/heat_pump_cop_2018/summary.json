@@ -1,0 +1,23 @@
+{
+  "latitude": 52.12,
+  "longitude": 6.03,
+  "year": 2018,
+  "provider": "merra-2",
+  "weather_module": "UU-BUEM/weather get_point_weather (column T)",
+  "techs": {
+    "heat_pump_electric_household": {
+      "hours": 8760,
+      "cop_min": 2.61,
+      "cop_mean": 4.434,
+      "cop_max": 12.116,
+      "first_timestep": "2018-01-01 00:30:00"
+    },
+    "heat_pump_electric_building": {
+      "hours": 8760,
+      "cop_min": 2.364,
+      "cop_mean": 4.016,
+      "cop_max": 10.975,
+      "first_timestep": "2018-01-01 00:30:00"
+    }
+  }
+}

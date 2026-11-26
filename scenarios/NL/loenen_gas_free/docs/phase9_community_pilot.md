@@ -80,6 +80,40 @@ Reading:
 - Upper bound: lossless, free links and no energy tax on shared kWh
   (system view). The member view is the next run.
 
+**Hourly heat pump COP** (2026-11-26, `build_nodes.py --cop hourly`, the
+default now). The air-source heat pumps' COP follows the outdoor
+temperature of the same MERRA-2 cell (`scripts/build_hp_cop.py`, through
+the `weather-cop` CLI; household COP 2.6-12.1, mean 4.4, against the fixed
+design value 3.30 at 2 degC). Ground-source keeps its design COP (no ground
+temperature in the weather module; the ground stays near its 10 degC
+design). Full year, Gurobi:
+
+| 20 members | Independent, design COP | Independent, hourly COP | Community, design COP | Community, hourly COP |
+| --- | --- | --- | --- | --- |
+| Total system cost | EUR 64,532 | EUR 64,144 | EUR 60,435 | EUR 59,834 |
+| Air-source heat pumps | 0 | 10.9 kW | 0 | 14.4 kW |
+| Ground-source heat pumps | 0.6 kW | 0 | 6.7 kW | 0 |
+| Biomass boilers | 120.2 kW | 110.6 kW | 113.9 kW | 106.8 kW |
+| Rooftop PV | 49.6 kWp | 52.1 kWp | 65.3 kWp | 68.1 kWp |
+| Batteries | 37.1 kWh home | 37.8 kWh home | 121.3 kWh community | 129.4 kWh community |
+| Grid import / export | 45.7 / 9.2 MWh | 56.7 / 13.3 MWh | 27.6 / 3.6 MWh | 32.1 / 5.4 MWh |
+| Peak import at station | 45 kW | 49 kW | 58 kW | 62 kW |
+
+- With the real COP, air-source heat pumps pay off for some members and
+  replace the ground-source one; at the design value they never did.
+  Biomass still covers most heat (winter peaks), heat pumps the mild hours.
+- Sharing saves EUR 4,310/yr (6.7%) with the hourly COP, EUR 4,097 (6.3%)
+  with the design COP: the hourly COP does not change the community
+  finding.
+- How it is wired: Calliope 0.7.0 lets a YAML value beat a data table, and
+  an import cannot redefine a key, so the hourly tables
+  (`flow_out_eff[heat]` = COP, `carrier_flow_ratio_in` = COP - 1) only apply
+  with the `hourly_cop` override (scalars set to null), which the model
+  writers embed and the solvers select (`build_nodes.model_scenario`).
+  Checked: the loaded COP varies hourly with it and is a flat 3.30 without.
+  Results: `community_cop_gurobi/`, `independent_split_cop_gurobi/`
+  (`run_pilot_cop.sh`).
+
 **Solver.** Use Calliope's native backends (`config.build.backend: highs`
 or `gurobi`); `build_community.py --solver highs` (default) | `gurobi` | `cbc`
 writes the backend and options (HiGHS: IPM without crossover; Gurobi:

@@ -31,14 +31,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_community import DATA, build  # noqa: E402
 
 
-def _one(station: str, row: dict, out: Path) -> dict:
+def _one(station: str, row: dict, out: Path, solver: str = "highs") -> dict:
     from solve_community import solve_model
 
     node_dir = out / row["node"]
     node_dir.mkdir(parents=True, exist_ok=True)
     members_csv = node_dir / "member.csv"
     pd.DataFrame([row]).to_csv(members_csv, index=False)
-    build(station, node_dir, mode="independent", members_csv=members_csv)
+    build(station, node_dir, mode="independent", members_csv=members_csv, solver=solver)
     return solve_model(node_dir)
 
 
@@ -94,6 +94,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--members", type=Path, default=None)
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--solver", default="highs", help="highs, gurobi or cbc")
     args = parser.parse_args(argv)
     members_csv = args.members or DATA / "community" / args.station / "members.csv"
     members = pd.read_csv(members_csv)
@@ -102,7 +103,7 @@ def main(argv: list[str] | None = None) -> None:
     results = []
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         futures = {
-            pool.submit(_one, args.station, row, out): row["node"]
+            pool.submit(_one, args.station, row, out, args.solver): row["node"]
             for row in members.to_dict("records")
         }
         for fut in as_completed(futures):

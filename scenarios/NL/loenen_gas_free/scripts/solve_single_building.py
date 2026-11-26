@@ -38,12 +38,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
 import calliope
 import pandas as pd
 from ruamel.yaml import YAML
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import build_nodes  # noqa: E402
 
 SCENARIO_ROOT = Path(__file__).resolve().parent.parent
 _yaml = YAML()
@@ -234,6 +239,11 @@ def build_single_building_model(
             f"{nodes_dir}/data_tables.yaml",
         ],
     }
+    cop_overrides = nodes_root / "cop_overrides.yaml"
+    if cop_overrides.exists():  # build_nodes.py --cop hourly
+        model_yaml["overrides"] = _yaml.load(cop_overrides.open(encoding="utf-8"))[
+            "overrides"
+        ]
     model_path = work_dir / "model.yaml"
     _write_yaml(model_path, model_yaml)
     return model_path
@@ -256,7 +266,9 @@ def solve(
         nodes_dir=nodes_dir,
     )
     t0 = time.time()
-    m = calliope.read_yaml(str(model_path))
+    m = calliope.read_yaml(
+        str(model_path), scenario=build_nodes.model_scenario(model_path)
+    )
     m.build()
     m.solve()
     elapsed = time.time() - t0

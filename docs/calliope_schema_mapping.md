@@ -321,7 +321,11 @@ subcommand, taking `--latitude`/`--longitude`/`--year`/`--provider`/
    checked against — per-hour now, not once, and any NaN hour (source
    temperature met/exceeded the sink temperature) raises rather than being
    written silently into a Calliope data table.
-3. Two CSVs (`<id>_flow_out_eff.csv` = COP, `<id>_flow_in_eff.csv` = COP − 1)
+3. Two CSVs (`<id>_flow_out_eff.csv` = COP on `heat`,
+   `<id>_carrier_flow_ratio_in.csv` = COP − 1, the free source heat per kWh
+   of electricity that `ratio_math.py`'s `link_flow_in_carriers` reads;
+   the ambient carrier's `flow_in_eff` is not read by that math, so it is
+   not varied -- changed 2026-11-26, it used to be)
    and a `data_tables:` YAML block referencing them are written.
 
 ```yaml
@@ -330,10 +334,10 @@ data_tables:
     table: heat_pump_electric_household_flow_out_eff.csv
     rows: timesteps
     add_dims: {techs: heat_pump_electric_household, carriers: heat, inputs: flow_out_eff}
-  heat_pump_electric_household_flow_in_eff:
-    table: heat_pump_electric_household_flow_in_eff.csv
+  heat_pump_electric_household_carrier_flow_ratio_in:
+    table: heat_pump_electric_household_carrier_flow_ratio_in.csv
     rows: timesteps
-    add_dims: {techs: heat_pump_electric_household, carriers: ambient_heat, inputs: flow_in_eff}
+    add_dims: {techs: heat_pump_electric_household, inputs: carrier_flow_ratio_in}
 ```
 
 Two single-column CSVs rather than one shared multi-column file: Calliope's
@@ -341,6 +345,23 @@ Two single-column CSVs rather than one shared multi-column file: Calliope's
 columns out of one file wasn't something this could be verified against a
 running Calliope install, so this uses the simplest documented shape
 instead of guessing at a more compact one.
+
+**The tech export's scalar COP masks these tables.** Calliope 0.7.0 gives a
+value defined in YAML precedence over a data table, and an `import:` cannot
+redefine a key, so with the exported tech file loaded as is the model keeps
+the flat design COP (checked: the loaded `flow_out_eff` is a constant 3.30).
+Set the two scalars to null in a named override and select it when reading:
+
+```yaml
+overrides:
+  hourly_cop:
+    techs:
+      heat_pump_electric_household: {flow_out_eff: null, carrier_flow_ratio_in: null}
+```
+
+`calliope.read_yaml("model.yaml", scenario="hourly_cop")` then loads the hourly
+values. The Loenen scenario does this in `scripts/build_nodes.py`
+(`--cop hourly`).
 
 Two things this deliberately does **not** attempt to fix:
 

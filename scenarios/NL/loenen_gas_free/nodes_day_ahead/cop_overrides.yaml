@@ -1,0 +1,9 @@
+overrides:
+  hourly_cop:
+    techs:
+      heat_pump_electric_household:
+        flow_out_eff:
+        carrier_flow_ratio_in:
+      heat_pump_electric_building:
+        flow_out_eff:
+        carrier_flow_ratio_in:
