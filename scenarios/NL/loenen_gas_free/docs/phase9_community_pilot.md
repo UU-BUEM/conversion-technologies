@@ -80,8 +80,11 @@ Reading:
 - Upper bound: lossless, free links and no energy tax on shared kWh
   (system view). The member view is the next run.
 
-**Hourly heat pump COP** (2026-11-26, `build_nodes.py --cop hourly`, the
-default now). The air-source heat pumps' COP follows the outdoor
+**Hourly heat pump COP** (2026-11-26, `build_nodes.py --cop hourly`; the
+default is now `hourly_matched`, the same shape scaled to the fixed COP's
+seasonal value -- all three variants, region and pilot, in
+`phase10_heat_pump_cop.md`; pilot with `hourly_matched`: independent
+EUR 64,321, community EUR 60,064, sharing -6.6 %). The air-source heat pumps' COP follows the outdoor
 temperature of the same MERRA-2 cell (`scripts/build_hp_cop.py`, through
 the `weather-cop` CLI; household COP 2.6-12.1, mean 4.4, against the fixed
 design value 3.30 at 2 degC). Ground-source keeps its design COP (no ground

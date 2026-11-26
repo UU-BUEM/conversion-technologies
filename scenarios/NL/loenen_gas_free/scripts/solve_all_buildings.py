@@ -42,6 +42,7 @@ def _solve_one(
     biomass: bool = True,
     ev: str = "smart",
     nodes_dir: str = "nodes",
+    solver: str = "cbc",
 ) -> dict:
     work_dir = per_building_dir / building / "_model"
     try:
@@ -52,6 +53,8 @@ def _solve_one(
             biomass=biomass,
             ev=ev,
             nodes_dir=nodes_dir,
+            solver=solver,
+            threads=1,
         )
     except Exception as exc:  # noqa: BLE001 -- one building's failure must not kill the batch
         return {"building": building, "error": f"{type(exc).__name__}: {exc}"}
@@ -97,6 +100,12 @@ def main() -> None:
         default="nodes",
         help="build_nodes.py output folder under the scenario root (default: nodes)",
     )
+    parser.add_argument(
+        "--solver",
+        choices=("cbc", "highs", "gurobi"),
+        default="cbc",
+        help="cbc (default, Pyomo backend), highs or gurobi (Calliope's native backends)",
+    )
     args = parser.parse_args()
 
     buildings = _all_building_ids(args.nodes_dir)
@@ -117,6 +126,7 @@ def main() -> None:
                 not args.no_biomass,
                 args.ev,
                 args.nodes_dir,
+                args.solver,
             ): b
             for b in buildings
         }

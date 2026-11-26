@@ -346,6 +346,16 @@ columns out of one file wasn't something this could be verified against a
 running Calliope install, so this uses the simplest documented shape
 instead of guessing at a more compact one.
 
+**Seasonal level (`--match-seasonal-cop HEAT_CSV`).** The design-point
+quality factor is calibrated so the *fixed* COP equals the source's annual
+average; applied hour by hour it gives a higher heat-weighted seasonal COP
+in a mild climate (Loenen 2018: 3.51 vs 3.30). With hourly heat demand as
+weights, `--match-seasonal-cop` scales the series by one factor so that
+`sum(Q) / sum(Q / COP)` equals the design COP -- a recalibrated quality
+factor, the hourly shape unchanged -- and records it in
+`<id>_cop_calibration.json`. Use it when comparing against a fixed-COP
+model, so the comparison isolates the timing effect.
+
 **The tech export's scalar COP masks these tables.** Calliope 0.7.0 gives a
 value defined in YAML precedence over a data table, and an `import:` cannot
 redefine a key, so with the exported tech file loaded as is the model keeps

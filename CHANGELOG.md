@@ -6,15 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- `weather-cop` writes the hourly `carrier_flow_ratio_in` (COP - 1, the free
-  source heat per kWh of electricity that `ratio_math.py` reads) instead of
-  `flow_in_eff` on the ambient carrier, which that math ignores; output
-  `<id>_carrier_flow_ratio_in.csv`, `build_cop_data_tables(...,
-  carrier_flow_ratio_in_csv=...)`.
+## [0.7.0] - 2026-11-26
 
 ### Added
+
+- `weather-cop --match-seasonal-cop HEAT_CSV` (`export_weather_cop(...,
+  match_seasonal_heat=...)`, `seasonal_cop()`, `match_seasonal_cop()`):
+  scales the hourly COP so its heat-weighted seasonal COP equals the
+  design-point COP (one factor = a recalibrated Carnot quality factor), and
+  writes `<id>_cop_calibration.json`. Without it the design-point quality
+  factor lifts the seasonal COP above the fixed-COP value (Loenen 2018:
+  3.51 vs 3.30).
+- **Loenen: fixed vs hourly heat pump COP**, region and pilot (scenario):
+  `build_nodes.py --cop hourly_matched` (new default) | `hourly` | `design`;
+  `build_hp_cop.py --match-seasonal`; `compare_cop_variants.py`;
+  `solve_all_buildings.py --solver` (Gurobi/HiGHS native backends; solver
+  settings shared in `build_nodes.py`); per-building re-solve with the new
+  demand (`outputs/v5`). At an unchanged seasonal COP, an hourly COP raises
+  the air-source heat pump share of heat from 1.6 % to 8.3 % (98 -> 490
+  dwellings); without the recalibration to 16.6 %. See
+  `scenarios/NL/loenen_gas_free/docs/phase10_heat_pump_cop.md`.
 
 - **Loenen: hourly air-source heat pump COP** (scenario):
   `scripts/build_hp_cop.py` (`weather-cop` CLI, MERRA-2 2018 at the demand
@@ -24,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Calliope 0.7.0 lets YAML values beat data tables). Pilot, full year:
   air-source heat pumps now built; community EUR 59,834 vs independent
   64,144 (sharing -6.7%). See `scenarios/NL/loenen_gas_free/docs/phase9_community_pilot.md`.
+
+### Changed
+
+- `weather-cop` writes the hourly `carrier_flow_ratio_in` (COP - 1, the free
+  source heat per kWh of electricity that `ratio_math.py` reads) instead of
+  `flow_in_eff` on the ambient carrier, which that math ignores; output
+  `<id>_carrier_flow_ratio_in.csv`, `build_cop_data_tables(...,
+  carrier_flow_ratio_in_csv=...)`.
 
 ## [0.6.0] - 2026-11-26
 

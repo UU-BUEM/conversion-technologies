@@ -11,6 +11,8 @@ from conversion_technologies.new.heat_pump.weather_cop import (
     build_cop_data_tables,
     compute_hourly_cop,
     export_weather_cop,
+    match_seasonal_cop,
+    seasonal_cop,
 )
 
 
@@ -126,4 +128,71 @@ def test_export_weather_cop_rejects_a_non_heat_pump_id(
             latitude=52.09,
             longitude=5.12,
             year=2018,
+        )
+
+
+def test_match_seasonal_cop_hits_the_target_and_keeps_the_shape() -> None:
+    index = pd.date_range("2018-01-01", periods=4, freq="h")
+    cop = pd.Series([2.0, 3.0, 4.0, 6.0], index=index)
+    heat = pd.Series([4.0, 2.0, 1.0, 0.0], index=index)  # cold hours weigh most
+    scaled, factor = match_seasonal_cop(cop, heat, target=3.3)
+    assert seasonal_cop(scaled, heat) == pytest.approx(3.3)
+    assert (scaled / cop).round(12).nunique() == 1  # one factor: shape kept
+    assert factor == pytest.approx(3.3 / seasonal_cop(cop, heat))
+
+
+def test_seasonal_cop_is_heat_weighted() -> None:
+    index = pd.date_range("2018-01-01", periods=2, freq="h")
+    cop = pd.Series([2.0, 4.0], index=index)
+    heat = pd.Series([2.0, 2.0], index=index)
+    # 4 kWh heat for 1 + 0.5 kWh electricity
+    assert seasonal_cop(cop, heat) == pytest.approx(4.0 / 1.5)
+
+
+def test_export_weather_cop_matches_the_design_seasonal_cop(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "conversion_technologies.new.heat_pump.weather_cop.get_point_weather",
+        lambda *args, **kwargs: _synthetic_weather_df(),
+    )
+    weather = _synthetic_weather_df()
+    heat = (20.0 - weather["T"]).clip(lower=0.0).rename("heat_kW")
+    heat_csv = tmp_path / "heat.csv"
+    heat.rename_axis("timesteps").to_csv(heat_csv)
+    paths = export_weather_cop(
+        "heat_pump_electric_household",
+        tmp_path / "out",
+        latitude=52.1,
+        longitude=6.0,
+        year=2018,
+        match_seasonal_heat=heat_csv,
+    )
+    cop = pd.read_csv(paths["flow_out_eff_csv"], index_col=0)["flow_out_eff"]
+    cop.index = heat.index
+    import json
+
+    calibration = json.loads(paths["calibration_json"].read_text())
+    assert seasonal_cop(cop, heat) == pytest.approx(calibration["design_cop"])
+    assert calibration["seasonal_cop_after"] == pytest.approx(calibration["design_cop"])
+
+
+def test_export_weather_cop_rejects_weights_missing_hours(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "conversion_technologies.new.heat_pump.weather_cop.get_point_weather",
+        lambda *args, **kwargs: _synthetic_weather_df(),
+    )
+    short = _synthetic_weather_df()["T"].iloc[:100].rename("heat_kW")
+    heat_csv = tmp_path / "heat.csv"
+    short.rename_axis("timesteps").to_csv(heat_csv)
+    with pytest.raises(ValueError, match="do not cover"):
+        export_weather_cop(
+            "heat_pump_electric_household",
+            tmp_path / "out",
+            latitude=52.1,
+            longitude=6.0,
+            year=2018,
+            match_seasonal_heat=heat_csv,
         )

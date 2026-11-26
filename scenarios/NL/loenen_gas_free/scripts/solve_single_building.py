@@ -159,6 +159,8 @@ def build_single_building_model(
     biomass: bool = True,
     ev: str = "smart",
     nodes_dir: str = "nodes",
+    solver: str = "cbc",
+    threads: int | None = None,
 ) -> Path:
     """Write a one-node model into ``work_dir`` that imports this
     scenario's real tech export / additional_math, and solves only
@@ -213,6 +215,9 @@ def build_single_building_model(
         kept[key] = table
     _write_yaml(work_dir / nodes_dir / "data_tables.yaml", {"data_tables": kept})
 
+    options = dict(build_nodes.SOLVER_OPTIONS[solver])
+    if threads is not None and solver == "gurobi":
+        options["Threads"] = threads  # many models in parallel
     model_yaml = {
         "config": {
             "init": {
@@ -227,8 +232,8 @@ def build_single_building_model(
                 "extra_math": ["additional_math"],
                 "mode": "base",
             },
-            "build": {},
-            "solve": {"solver": "cbc"},
+            "build": {"backend": build_nodes.SOLVERS[solver]},
+            "solve": {"solver": solver, "solver_options": options},
         },
         "import": [
             str(
@@ -256,6 +261,8 @@ def solve(
     biomass: bool = True,
     ev: str = "smart",
     nodes_dir: str = "nodes",
+    solver: str = "cbc",
+    threads: int | None = None,
 ) -> dict:
     model_path = build_single_building_model(
         building_node,
@@ -264,6 +271,8 @@ def solve(
         biomass=biomass,
         ev=ev,
         nodes_dir=nodes_dir,
+        solver=solver,
+        threads=threads,
     )
     t0 = time.time()
     m = calliope.read_yaml(

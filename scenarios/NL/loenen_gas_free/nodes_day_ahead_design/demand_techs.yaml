@@ -1,0 +1,70 @@
+techs:
+  demand_heat:
+    base_tech: demand
+    name: Heat demand (space heating + DHW)
+    carrier_in: heat
+    comment: sink_use_equals = buem's Q_heat_kW + dhw_kW, per building (scenarios/NL/loenen_gas_free/docs/phase1_demand.md). Not verified against a running Calliope solve -- see this repo's docs/calliope_schema_mapping.md caveat on additional_math, which applies here too.
+  demand_elec:
+    base_tech: demand
+    name: Electricity demand (appliances; cooking already included)
+    carrier_in: electricity
+    comment: "sink_use_equals = buem's elec_kW (occupancy's elecLoad). No Loenen building in this population cooks with gas (verified: cooking_gas_kW sums to 0 for all 1,260 buildings), so no separate cooking carrier is modeled."
+  demand_cool:
+    base_tech: demand
+    name: Cooling demand (space cooling)
+    carrier_in: cooling
+    comment: "sink_use_equals = -buem's Q_cool_kW, clipped to >= 0 (buem's own sign convention: Q_cool_kW <= 0, a negative net heat flow). See conversion_technologies' chiller category (docs/calliope_schema_mapping.md 'Cooling technologies') for the electric/absorption/reversible-heat-pump options this demand is met by. Not verified against a running Calliope solve -- same caveat as demand_heat above."
+  supply_grid_electricity:
+    base_tech: supply
+    name: Grid electricity import
+    carrier_out: electricity
+    flow_cap_max: 1000000.0
+    comment: "cost_flow_out is hourly, from the loenen_grid_price data table: Eurostat flat price (energy_prices.csv) + the 2018 NL day-ahead price's deviation from its mean (grid_price_nl_2018.csv, scripts/build_grid_price.py)."
+  supply_biomass:
+    base_tech: supply
+    name: Biomass (wood pellet) fuel supply
+    carrier_out: biomass
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.064034
+      index: monetary
+      dims: costs
+    comment: EUR/kWh; DEA SOEB25 consumer-level wood pellet factor price 2025, DKK->EUR (energy_prices.csv).
+  supply_ambient_heat:
+    base_tech: supply
+    name: Free ambient (outdoor-air) heat source
+    carrier_out: ambient_heat
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.0
+      index: monetary
+      dims: costs
+  supply_ground_heat:
+    base_tech: supply
+    name: Free ground heat source
+    carrier_out: ground_heat
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.0
+      index: monetary
+      dims: costs
+  demand_ev_driving:
+    base_tech: demand
+    name: EV driving energy (drawn from the car's battery)
+    carrier_in: ev_electricity
+    comment: sink_use_equals = Phase 1's ev_drive_kW (occupancy's ev_drive_kwh, battery side). Because it is met from the battery, the charge needed before each trip is enforced without an explicit departure-SOC constraint.
+  supply_ev_away:
+    base_tech: supply
+    name: EV charging away from home (workplace / public)
+    carrier_out: ev_electricity
+    flow_cap_max: 1000000.0
+    cost_flow_out:
+      data: 0.0
+      index: monetary
+      dims: costs
+    comment: "source_use_equals = Phase 1's ev_away_kW (grid side) x the DC charger's efficiency: a fixed amount reaching the battery while the car is away (energy_prices.csv note)."
+  demand_ev_uncontrolled:
+    base_tech: demand
+    name: EV home charging, uncontrolled (baseline variant)
+    carrier_in: electricity
+    comment: "sink_use_equals = Phase 1's ev_kW: occupancy's charging on plug-in, no flexibility. Used only by solve_single_building.py --ev-uncontrolled, in place of the EV charger/battery/driving/away techs."

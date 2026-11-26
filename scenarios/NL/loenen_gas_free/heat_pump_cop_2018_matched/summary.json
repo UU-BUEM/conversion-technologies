@@ -1,0 +1,44 @@
+{
+  "latitude": 52.12,
+  "longitude": 6.03,
+  "year": 2018,
+  "provider": "merra-2",
+  "weather_module": "UU-BUEM/weather get_point_weather (column T)",
+  "seasonal_cop_matched": true,
+  "techs": {
+    "heat_pump_electric_household": {
+      "hours": 8760,
+      "cop_min": 2.454,
+      "cop_mean": 4.17,
+      "cop_max": 11.394,
+      "first_timestep": "2018-01-01 00:30:00",
+      "calibration": {
+        "technology_id": "heat_pump_electric_household",
+        "design_cop": 3.299881395348837,
+        "seasonal_cop_before": 3.5089559784571973,
+        "seasonal_cop_after": 3.2998813953488364,
+        "factor": 0.9404168691793376,
+        "quality_factor": 0.446,
+        "quality_factor_calibrated": 0.4194259236539846,
+        "heat_weights": "heat_weights_region_kw.csv"
+      }
+    },
+    "heat_pump_electric_building": {
+      "hours": 8760,
+      "cop_min": 2.223,
+      "cop_mean": 3.777,
+      "cop_max": 10.321,
+      "first_timestep": "2018-01-01 00:30:00",
+      "calibration": {
+        "technology_id": "heat_pump_electric_building",
+        "design_cop": 2.9891302325581397,
+        "seasonal_cop_before": 3.178516177795309,
+        "seasonal_cop_after": 2.98913023255814,
+        "factor": 0.9404168691793378,
+        "quality_factor": 0.404,
+        "quality_factor_calibrated": 0.3799284151484525,
+        "heat_weights": "heat_weights_region_kw.csv"
+      }
+    }
+  }
+}

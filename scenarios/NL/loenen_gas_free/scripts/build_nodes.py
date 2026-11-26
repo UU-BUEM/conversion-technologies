@@ -40,9 +40,26 @@ _GRID_PRICE_PATH = SCENARIO_ROOT / "grid_price_nl_2018.csv"
 GRID_PRICE_CHOICES = ("day_ahead", "flat")
 # Hourly air-source heat pump COP from build_hp_cop.py (weather-cop CLI);
 # "design" keeps the fixed design-point COP of the tech export (v3/v4 runs).
-_HP_COP_DIR = SCENARIO_ROOT / "heat_pump_cop_2018"
+_HP_COP_DIRS = {
+    "hourly": SCENARIO_ROOT / "heat_pump_cop_2018",
+    "hourly_matched": SCENARIO_ROOT / "heat_pump_cop_2018_matched",
+}
 _HP_COP_TECHS = ("heat_pump_electric_household", "heat_pump_electric_building")
-COP_CHOICES = ("hourly", "design")
+COP_CHOICES = ("hourly_matched", "hourly", "design")
+# Solver -> Calliope build backend. HiGHS runs through Calliope's own highspy
+# backend: Pyomo's HiGHS interfaces fail on Calliope 0.7.0 models (Pyomo 6.9.4
+# and 6.10.1, docs/phase9_community_pilot.md "Solver"). Same optimum as CBC.
+SOLVERS = {"highs": "highs", "cbc": "pyomo", "gurobi": "gurobi"}
+# HiGHS options: interior point without crossover. The default dual simplex
+# had no feasible point after ~40 min on the 20-member full year; IPM needs a
+# few dozen iterations whatever the horizon (one week: same optimum).
+SOLVER_OPTIONS = {
+    "highs": {"solver": "ipm", "run_crossover": "off"},
+    "cbc": {},
+    # Gurobi through Calliope's native backend (needs gurobipy + a licence):
+    # barrier without crossover. One-week test: same optimum, 0.6 s barrier.
+    "gurobi": {"Method": 2, "Crossover": 0, "Threads": 8},
+}
 # Calliope 0.7.0: a YAML value beats a data table, and an import can't
 # redefine a key, so the tech export's scalar design COP would mask the
 # hourly tables. This named override (written to cop_overrides.yaml, merged
@@ -228,7 +245,7 @@ def build(
     hourly_parquet: Path,
     out_dir: Path,
     grid_price: str = "day_ahead",
-    cop: str = "hourly",
+    cop: str = "hourly_matched",
 ) -> None:
     if grid_price not in GRID_PRICE_CHOICES:
         raise ValueError(f"grid_price must be one of {GRID_PRICE_CHOICES}")
@@ -657,7 +674,7 @@ def build(
                 "costs": "monetary",
             },
         }
-    if cop == "hourly":
+    if cop in _HP_COP_DIRS:
         # One series per technology for every node (no `columns`, so no
         # node dimension), as for the grid price. Both parameters must
         # follow the hour: flow_out_eff[heat] = COP and
@@ -667,7 +684,7 @@ def build(
                 ("flow_out_eff", {"carriers": "heat"}),
                 ("carrier_flow_ratio_in", {}),
             ):
-                src = _HP_COP_DIR / f"{tech}_{param}.csv"
+                src = _HP_COP_DIRS[cop] / f"{tech}_{param}.csv"
                 if not src.exists():
                     raise FileNotFoundError(
                         f"{src} missing: run scripts/build_hp_cop.py first "
@@ -687,7 +704,7 @@ def build(
                     "add_dims": {"techs": tech, "inputs": param, **dims},
                 }
     overrides_path = out_dir / "cop_overrides.yaml"
-    if cop == "hourly":
+    if cop in _HP_COP_DIRS:
         _write_yaml(overrides_path, {"overrides": cop_overrides()})
     else:
         overrides_path.unlink(missing_ok=True)
@@ -718,8 +735,8 @@ def main() -> None:
     parser.add_argument(
         "--cop",
         choices=COP_CHOICES,
-        default="hourly",
-        help="Air-source heat pump COP: hourly from outdoor temperature (default, heat_pump_cop_2018/) or the fixed design point (v3/v4)",
+        default="hourly_matched",
+        help="Air-source heat pump COP: hourly matched to the design seasonal COP (default, heat_pump_cop_2018_matched/), hourly with the design-point quality factor (heat_pump_cop_2018/), or the fixed design point (v3/v4)",
     )
     args = parser.parse_args()
     build(args.hourly_parquet, args.out_dir, grid_price=args.grid_price, cop=args.cop)

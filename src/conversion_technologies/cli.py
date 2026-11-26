@@ -236,6 +236,7 @@ def _cmd_weather_cop(args: argparse.Namespace) -> int:
         year=args.year,
         provider=args.provider,
         data_dir=args.data_dir,
+        match_seasonal_heat=args.match_seasonal_cop,
     )
     for path in paths.values():
         print(f"Wrote {path}")
@@ -449,6 +450,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         default=None,
         help="Output directory (default: <output_dir>/).",
+    )
+    weather_cop_parser.add_argument(
+        "--match-seasonal-cop",
+        default=None,
+        metavar="HEAT_CSV",
+        help=(
+            "Scale the hourly COP so its heat-weighted seasonal COP equals "
+            "the design COP; HEAT_CSV: hourly heat demand (timesteps, one "
+            "value column) used as the weights."
+        ),
     )
     weather_cop_parser.set_defaults(func=_cmd_weather_cop)
 

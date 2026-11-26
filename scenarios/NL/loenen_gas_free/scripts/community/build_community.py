@@ -68,20 +68,9 @@ IMPORT = "supply_grid_electricity"
 EXPORT = "demand_grid_export"
 COMMUNITY_NODE = "community"
 MODES = ("community", "independent")
-# Solver -> Calliope build backend. HiGHS runs through Calliope's own highspy
-# backend: Pyomo's HiGHS interfaces fail on Calliope 0.7.0 models (Pyomo 6.9.4
-# and 6.10.1, docs/phase9_community_pilot.md "Solver"). Same optimum as CBC.
-SOLVERS = {"highs": "highs", "cbc": "pyomo", "gurobi": "gurobi"}
-# HiGHS options: interior point without crossover. The default dual simplex
-# had no feasible point after ~40 min on the 20-member full year; IPM needs a
-# few dozen iterations whatever the horizon (one week: same optimum).
-SOLVER_OPTIONS = {
-    "highs": {"solver": "ipm", "run_crossover": "off"},
-    "cbc": {},
-    # Gurobi through Calliope's native backend (needs gurobipy + a licence):
-    # barrier without crossover. One-week test: same optimum, 0.6 s barrier.
-    "gurobi": {"Method": 2, "Crossover": 0, "Threads": 8},
-}
+# Solver settings live in build_nodes.py (shared with the per-building runs).
+SOLVERS = build_nodes.SOLVERS
+SOLVER_OPTIONS = build_nodes.SOLVER_OPTIONS
 
 _yaml = YAML()
 _yaml.default_flow_style = False

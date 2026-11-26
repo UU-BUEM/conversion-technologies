@@ -22,6 +22,7 @@ dependency -- there is deliberately no CSV/local-file fallback. See
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +65,46 @@ def compute_hourly_cop(
     require_no_nan(cop, name="hourly COP", tech_id=tech_id, labels=labels)
     require_range_array(cop, 1, 20, name="hourly COP", tech_id=tech_id, labels=labels)
     return pd.Series(cop, index=temperature_c.index, name="cop")
+
+
+def seasonal_cop(cop: pd.Series, heat: pd.Series) -> float:
+    """Heat-weighted seasonal COP: total heat over total electricity,
+    ``sum(heat) / sum(heat / cop)`` (hours with no heat count for
+    nothing)."""
+    heat = heat.clip(lower=0.0)
+    total = float(heat.sum())
+    if total <= 0.0:
+        raise ValueError("heat weights sum to zero: no seasonal COP.")
+    return total / float((heat / cop).sum())
+
+
+def match_seasonal_cop(
+    cop: pd.Series, heat: pd.Series, target: float
+) -> tuple[pd.Series, float]:
+    """Scale an hourly COP so its heat-weighted seasonal COP equals
+    ``target`` (the design-point COP, itself calibrated to the source's
+    annual average). COP is proportional to the Carnot quality factor,
+    so this is exactly a re-calibrated quality factor: the hourly shape
+    stays, the seasonal level matches the fixed-COP model. Returns the
+    scaled series and the factor."""
+    factor = target / seasonal_cop(cop, heat)
+    return cop * factor, factor
+
+
+def _heat_weights(path: str | Path, index: pd.Index) -> pd.Series:
+    """First value column of a ``timesteps`` CSV, aligned to ``index``."""
+    table = pd.read_csv(path, index_col=0)
+    series = table.iloc[:, 0]
+    series.index = pd.to_datetime(series.index)
+    aligned = series.reindex(pd.DatetimeIndex(index))
+    if aligned.isna().any():
+        raise ValueError(
+            f"{path}: heat weights do not cover every weather hour "
+            f"({int(aligned.isna().sum())} missing; same year and hour "
+            "stamps needed)."
+        )
+    aligned.index = index
+    return aligned
 
 
 def _design_row(technology_id: str) -> dict[str, Any]:
@@ -153,6 +194,7 @@ def export_weather_cop(
     year: int,
     provider: str = "era5-land",
     data_dir: str | Path | None = None,
+    match_seasonal_heat: str | Path | None = None,
 ) -> dict[str, Path]:
     """End to end: a registered heat pump id + a location -> written files.
 
@@ -169,6 +211,14 @@ def export_weather_cop(
     ``<id>_data_tables.yaml``. Returns their paths, keyed
     ``"flow_out_eff_csv"``/``"carrier_flow_ratio_in_csv"``/
     ``"data_tables_yaml"``.
+
+    With ``match_seasonal_heat`` (a ``timesteps`` CSV of hourly heat
+    demand, used as weights), the hourly COP is scaled so its
+    heat-weighted seasonal COP equals the design-point COP
+    (:func:`match_seasonal_cop`), and a fourth file
+    ``<id>_cop_calibration.json`` records the factor. Without it the
+    design-point quality factor is used as is, which lifts the annual
+    mean above the design COP in a mild climate.
 
     Raises ``ValueError`` if ``technology_id`` isn't registered or isn't
     heat-pump-shaped (exactly 2 input carriers: electricity + a free heat
@@ -195,6 +245,37 @@ def export_weather_cop(
         quality_factor=row["efficiency"],
         tech_id=technology_id,
     )
+    calibration: dict[str, Any] | None = None
+    if match_seasonal_heat is not None:
+        heat = _heat_weights(match_seasonal_heat, cop.index)
+        design_cop = float(
+            carnot_cop(
+                t_source_c=row["design_source_temp_c"],
+                t_sink_c=row["design_sink_temp_c"],
+                carnot_efficiency=row["efficiency"],
+            )
+        )
+        before = seasonal_cop(cop, heat)
+        cop, factor = match_seasonal_cop(cop, heat, design_cop)
+        labels = list(cop.index)
+        require_range_array(
+            cop.to_numpy(),
+            1,
+            20,
+            name="hourly COP",
+            tech_id=technology_id,
+            labels=labels,
+        )
+        calibration = {
+            "technology_id": technology_id,
+            "design_cop": design_cop,
+            "seasonal_cop_before": before,
+            "seasonal_cop_after": seasonal_cop(cop, heat),
+            "factor": factor,
+            "quality_factor": row["efficiency"],
+            "quality_factor_calibrated": row["efficiency"] * factor,
+            "heat_weights": str(match_seasonal_heat),
+        }
 
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -214,8 +295,13 @@ def export_weather_cop(
     )
     write_yaml_document(data_tables, data_tables_path)
 
-    return {
+    paths = {
         "flow_out_eff_csv": flow_out_eff_path,
         "carrier_flow_ratio_in_csv": ratio_path,
         "data_tables_yaml": data_tables_path,
     }
+    if calibration is not None:
+        calibration_path = out_dir / f"{technology_id}_cop_calibration.json"
+        calibration_path.write_text(json.dumps(calibration, indent=2))
+        paths["calibration_json"] = calibration_path
+    return paths

@@ -19,7 +19,16 @@ every node:
   drawn per kWh of electricity (the ratio math reads this, not the ambient
   carrier's ``flow_in_eff``).
 
-``build_nodes.py --cop hourly`` (the default) wires them in. Ground-source
+With ``--match-seasonal`` the series are scaled so their heat-weighted
+seasonal COP equals the design COP (3.30 household, 2.99 building: the
+fixed-COP model's value, calibrated to DEA's annual average), weighted by
+the 1,260 dwellings' summed hourly heat demand
+(``nodes_day_ahead/demand_heat.csv``). Without it the design-point quality
+factor is used as is and the seasonal COP comes out higher (about 4.4 in
+Loenen), so the comparison with the fixed COP would mix the hourly shape
+with a higher level. Output then goes to ``heat_pump_cop_2018_matched/``.
+
+``build_nodes.py --cop hourly|hourly_matched`` wires them in. Ground-source
 heat pumps keep their design-point COP: the weather module has no ground
 temperature, and the ground is close to its design 10 degC all year.
 
@@ -41,20 +50,30 @@ SCENARIO_ROOT = Path(__file__).resolve().parent.parent
 CT_PYTHON = "C:/Users/sahoo002/.conda/envs/conversion_env/python.exe"
 WEATHER_DIR = "D:/test/weather/data/merra2/output"
 OUT_DIR = SCENARIO_ROOT / "heat_pump_cop_2018"
+MATCHED_DIR = SCENARIO_ROOT / "heat_pump_cop_2018_matched"
+HEAT_DEMAND = SCENARIO_ROOT / "nodes_day_ahead" / "demand_heat.csv"
 
 # Same weather point as buem's demand run and build_pv_potential.py.
 LATITUDE, LONGITUDE, YEAR = 52.12, 6.03, 2018
 TECHS = ("heat_pump_electric_household", "heat_pump_electric_building")
 
 
-def run(out_dir: Path = OUT_DIR) -> dict:
+def run(out_dir: Path = OUT_DIR, match_seasonal: bool = False) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
+    weights = None
+    if match_seasonal:
+        # Region heat demand per hour (sum over the dwellings), the
+        # weights of the seasonal COP.
+        heat = pd.read_csv(HEAT_DEMAND, index_col=0).sum(axis=1)
+        weights = out_dir / "heat_weights_region_kw.csv"
+        heat.rename("heat_kW").rename_axis("timesteps").to_csv(weights)
     summary: dict = {
         "latitude": LATITUDE,
         "longitude": LONGITUDE,
         "year": YEAR,
         "provider": "merra-2",
         "weather_module": "UU-BUEM/weather get_point_weather (column T)",
+        "seasonal_cop_matched": match_seasonal,
         "techs": {},
     }
     for tech in TECHS:
@@ -77,6 +96,8 @@ def run(out_dir: Path = OUT_DIR) -> dict:
             "-o",
             str(out_dir),
         ]
+        if weights is not None:
+            cmd += ["--match-seasonal-cop", str(weights)]
         print(" ".join(cmd), flush=True)
         subprocess.run(cmd, check=True)
         cop = pd.read_csv(out_dir / f"{tech}_flow_out_eff.csv", index_col=0)[
@@ -89,6 +110,12 @@ def run(out_dir: Path = OUT_DIR) -> dict:
             "cop_max": round(float(cop.max()), 3),
             "first_timestep": str(cop.index[0]),
         }
+        if weights is not None:
+            calib = out_dir / f"{tech}_cop_calibration.json"
+            calibration = json.loads(calib.read_text())
+            calibration["heat_weights"] = weights.name  # relative to out_dir
+            summary["techs"][tech]["calibration"] = calibration
+            calib.unlink()
         # The CLI's own data_tables YAML has no node mapping; build_nodes.py
         # writes the scenario's entries, so drop it to avoid two sources.
         (out_dir / f"{tech}_data_tables.yaml").unlink(missing_ok=True)
@@ -98,9 +125,15 @@ def run(out_dir: Path = OUT_DIR) -> dict:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--out", type=Path, default=OUT_DIR)
+    parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument(
+        "--match-seasonal",
+        action="store_true",
+        help="scale to the design (DEA annual-average) seasonal COP",
+    )
     args = parser.parse_args(argv)
-    print(json.dumps(run(args.out), indent=2))
+    out = args.out or (MATCHED_DIR if args.match_seasonal else OUT_DIR)
+    print(json.dumps(run(out, args.match_seasonal), indent=2))
 
 
 if __name__ == "__main__":
