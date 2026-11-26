@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Loenen community pilot results** (scenario only): full year, 20
+  members on one station. Community EUR 60,435/yr vs independent
+  EUR 64,532/yr (-6.3%), 65.3 vs 49.6 kWp PV, one 121 kWh community battery
+  instead of 37 kWh at homes, import 27.6 vs 45.7 MWh; the station limit
+  does not bind. `build_community.py --solver gurobi` (Calliope's native
+  Gurobi backend, barrier); HiGHS default now runs interior point without
+  crossover. `solve_community.py` reports peaks in kW per time step length.
+  See `scenarios/NL/loenen_gas_free/docs/phase9_community_pilot.md`.
+
 ## [0.5.0] - 2026-11-26
 
 ### Added

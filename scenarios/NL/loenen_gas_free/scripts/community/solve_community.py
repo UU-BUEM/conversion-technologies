@@ -82,24 +82,30 @@ def summarise(m, model_dir: Path) -> dict:
     imp = imp.sum("nodes", skipna=True).to_series()
     exp = res["flow_in"].sel(techs="demand_grid_export", carriers="electricity")
     exp = exp.sum("nodes", skipna=True).to_series()
-    # Hourly exchange with the grid, so per-member (independent) solves can
-    # be summed hour by hour into a coincident station load.
-    pd.DataFrame({"import_kW": imp, "export_kW": exp}).fillna(0.0).to_csv(
-        model_dir / "exchange_hourly.csv"
-    )
+    # Flows are energy per time step; divide by its length in hours for kW
+    # (1 h unless the model is resampled, e.g. to 3 h).
+    step_h = m.inputs["timestep_resolution"].to_series().reindex(imp.index)
+    # Exchange with the grid per time step, so per-member (independent)
+    # solves can be summed step by step into a coincident station load.
+    pd.DataFrame({"import_kW": imp / step_h, "export_kW": exp / step_h}).fillna(
+        0.0
+    ).to_csv(model_dir / "exchange_hourly.csv")
     out["station_exchange"] = {
-        "import_peak_kw": float(imp.max()),
-        "export_peak_kw": float(exp.max()),
-        "hours_importing": int((imp > 1e-3).sum()),
-        "hours_exporting": int((exp > 1e-3).sum()),
+        "import_peak_kw": float((imp / step_h).max()),
+        "export_peak_kw": float((exp / step_h).max()),
+        "hours_importing": float(step_h[imp > 1e-3].sum()),
+        "hours_exporting": float(step_h[exp > 1e-3].sum()),
     }
-    lim = model_dir / "nodes" / "station_import_limit.csv"
-    if lim.exists():
-        limit = pd.read_csv(lim, index_col=0)["community"]
-        limit.index = pd.to_datetime(limit.index)
-        limit = limit.reindex(pd.to_datetime(imp.index))
-        out["station_exchange"]["hours_import_at_limit"] = int(
-            ((limit - imp.to_numpy()) < 1e-3).sum()
+    if (model_dir / "nodes" / "station_import_limit.csv").exists():
+        # The model's own (possibly resampled) limit, same units as the flow.
+        limit = (
+            m.inputs["source_use_max"]
+            .sel(nodes="community", techs="supply_grid_electricity")
+            .to_series()
+            .reindex(imp.index)
+        )
+        out["station_exchange"]["hours_import_at_limit"] = float(
+            step_h[(limit - imp) < 1e-3].sum()
         )
     return out
 
