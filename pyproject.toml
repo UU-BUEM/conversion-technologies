@@ -30,19 +30,23 @@ dependencies = [
     "numpy>=1.26,<3",
     "pandas>=2.0,<3",
     "ruamel.yaml>=0.18,<1",
-    # weather (https://github.com/UU-BUEM/weather) -- compulsory (2026-07-28):
-    # weather-cop's hourly heat pump COP comes from its real per-location
-    # get_point_weather() fetch, no bundled/CSV fallback -- matches how
-    # UU-BUEM/buem treats this same dependency. `pointquery` only (not
-    # `solar`): COP only needs T, no irradiance. Not on PyPI/conda yet, so a
-    # direct git reference (PEP 508), tracked at @main -- see
-    # infrastructure/env/conversion_env.yml's header comment for the
-    # reproducibility trade-off.
-    "weather[pointquery] @ git+https://github.com/UU-BUEM/weather.git@main",
+    # weather -- compulsory (2026-07-28): weather-cop's hourly heat pump COP
+    # and the PV profiles come from its real per-location get_point_weather()
+    # fetch, no bundled/CSV fallback. The EnerPlanET line
+    # (https://github.com/enerplanet/weather, >= 2.0) since 2026-11-24: its
+    # get_point_weather(..., variables=[...]) returns the curated variables
+    # incl. wind (WS_10M) that the PV model needs. `solar` for DNI/DHI
+    # reconstruction (PV). Not on PyPI/conda yet, so a direct git reference
+    # (PEP 508), pinned to a release tag.
+    "weather[pointquery,solar] @ git+https://github.com/enerplanet/weather.git@v2.5.0",
 ]
 
 [project.optional-dependencies]
 dev = ["mypy", "pytest", "pytest-cov", "ruff"]
+# Rooftop PV profiles (generation_technologies.pv): NREL PVWatts v8 via
+# PySAM, pinned to the version EnerPlanET's pysam-pv service uses so both
+# give the same numbers. Only the profile engine imports it.
+pv = ["NREL-PySAM==7.1.1.post1"]
 
 [project.scripts]
 conversion-technologies = "conversion_technologies.cli:main"
@@ -57,6 +61,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "conversion_technologies.new" = ["technologies.csv", "costs.csv"]
+"conversion_technologies.generation_technologies" = ["technologies.csv", "costs.csv"]
 "conversion_technologies.config" = ["data/*.json"]
 
 [tool.setuptools_scm]
@@ -71,7 +76,9 @@ target-version = "py312"
 src = ["src"]
 # existing/ (fireplace.py) is a pre-existing, out-of-scope module left untouched
 # per .claude/resolved.md ("existing-vs-new") -- not linted/formatted by this project.
-extend-exclude = ["src/conversion_technologies/existing"]
+# tests/data/pysam_pv/ is a verbatim, pinned copy of enerplanet/pysam-pv's
+# simulate.py (the PV consistency reference) -- kept byte-identical.
+extend-exclude = ["src/conversion_technologies/existing", "tests/data/pysam_pv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]

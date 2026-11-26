@@ -1,0 +1,3 @@
+category,variant,scale,name,color,cost_flow_cap,cost_om_annual,cost_interest_rate
+pv,rooftop,household,Rooftop photovoltaics,#F9C80E,2217.39,20.76,0.0225
+pv,rooftop,building,Rooftop photovoltaics,#F9C80E,1509.71,15.10,0.0225

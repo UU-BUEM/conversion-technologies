@@ -8,10 +8,15 @@ is a separate modeling paradigm and is not imported from this package.
 from __future__ import annotations
 
 from conversion_technologies.new import (  # noqa: F401
+    battery,
     boiler,
     chiller,
     combined_heat_and_power,
+    ev,
     heat_pump,
+)
+from conversion_technologies.new.battery import (
+    specific as _battery_specific,  # noqa: F401
 )
 from conversion_technologies.new.boiler import (
     specific as _boiler_specific,  # noqa: F401
@@ -21,6 +26,9 @@ from conversion_technologies.new.chiller import (
 )
 from conversion_technologies.new.combined_heat_and_power import (  # noqa: F401
     specific as _chp_specific,
+)
+from conversion_technologies.new.ev import (
+    specific as _ev_specific,  # noqa: F401
 )
 from conversion_technologies.new.heat_pump import (
     specific as _heat_pump_specific,  # noqa: F401

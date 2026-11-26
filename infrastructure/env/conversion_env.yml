@@ -2,12 +2,8 @@
 # Create:  conda env create -f infrastructure/env/conversion_env.yml
 # Update:  conda env update -f infrastructure/env/conversion_env.yml --prune
 #
-# weather (below, under pip:) is tracked at @main rather than a pinned tag,
-# so `conda env update ... --prune` always picks up its latest pushed
-# changes -- re-run the update command above periodically to refresh. Pin to
-# a specific released tag instead (e.g. @v3.0.0) if you need a reproducible,
-# non-moving environment. Matches UU-BUEM/buem's infrastructure/env/
-# buem_env.yml convention for the same dependency.
+# weather (below, under pip:) is pinned to a release tag of the EnerPlanET
+# line (enerplanet/weather); bump the tag to follow a new release.
 #
 # dask/netcdf4/xarray are weather[pointquery]'s own runtime dependencies,
 # listed explicitly here as conda packages rather than left for pip to
@@ -18,17 +14,24 @@
 # is needed at runtime by weather's xr.open_mfdataset point-query path but
 # is not declared by weather[pointquery]'s own extras (confirmed against
 # UU-BUEM/buem's infrastructure/env/buem_env.yml, which hits the same gap).
+#
+# nrel-pysam (rooftop PV profiles, generation_technologies.pv) comes from
+# NREL's own conda channel, pinned to the version EnerPlanET's pysam-pv
+# service uses so both give the same PVWatts v8 numbers.
 name: conversion_env
 channels:
   - conda-forge
+  - nrel
   - defaults
 dependencies:
   - python=3.12
+  - nrel::nrel-pysam=7.1.1.post1
   - numpy=1.26.*
   - pandas=2.*
   - dask
   - netcdf4
   - xarray
+  - pvlib>=0.10
   - pytest=8.*
   - pytest-cov=5.*
   - pip
@@ -36,11 +39,11 @@ dependencies:
       - ruamel.yaml>=0.18,<1  # comment-preserving YAML writer for Calliope tech configs
       - ruff>=0.6
       - mypy>=1.8
-      # weather (https://github.com/UU-BUEM/weather): compulsory (2026-07-28)
-      # -- weather-cop's hourly heat pump COP comes from its real
-      # per-location get_point_weather() fetch, no bundled/CSV fallback.
-      # Not published to PyPI/conda yet, so a direct git reference
-      # (PEP 508). All of its own runtime dependencies are already
-      # conda-installed above, so this line only adds the package code
-      # itself.
-      - weather[pointquery] @ git+https://github.com/UU-BUEM/weather.git@main
+      # weather (https://github.com/enerplanet/weather, the EnerPlanET line,
+      # >= 2.0 for get_point_weather(..., variables=[...]) incl. wind):
+      # compulsory -- heat pump COP and PV profiles come from its real
+      # per-location fetch, no bundled/CSV fallback. Not published to
+      # PyPI/conda yet, so a direct git reference (PEP 508), pinned to a
+      # release tag. Its runtime dependencies (incl. pvlib for the `solar`
+      # extra) are conda-installed above.
+      - weather[pointquery,solar] @ git+https://github.com/enerplanet/weather.git@v2.5.0

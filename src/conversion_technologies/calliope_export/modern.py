@@ -95,12 +95,10 @@ def _capacity_cost_field(value: float, carrier: str) -> dict[str, Any]:
     }
 
 
-def export(tech: TechnologySpec) -> dict[str, Any]:
-    """Return a ``conversion`` tech body for ``tech``."""
+def _conversion_body(tech: TechnologySpec) -> dict[str, Any]:
     body: dict[str, Any] = {"base_tech": "conversion", "name": tech.name}
     if tech.color:
         body["color"] = tech.color
-
     body["carrier_in"] = _carrier_field(tech.carriers_in)
     body["carrier_out"] = _carrier_field(tech.carriers_out)
     body["flow_in_eff"] = _efficiency_field(tech.carriers_in)
@@ -110,11 +108,61 @@ def export(tech: TechnologySpec) -> dict[str, Any]:
     # live inside additional_math.yaml's parameters block under real
     # Calliope 0.7.0.
     body.update(carrier_flow_ratios(tech))
+    return body
+
+
+def _storage_body(tech: TechnologySpec) -> dict[str, Any]:
+    """A ``storage`` tech: one carrier in and out, charging/discharging
+    efficiency as scalar ``flow_in_eff``/``flow_out_eff``. Storage capacity
+    parameters (``storage_cap_max``, ``storage_discharge_depth``, ...) come
+    through ``params`` like every other column."""
+    carrier = next(iter(tech.carriers_in))
+    body: dict[str, Any] = {"base_tech": "storage", "name": tech.name}
+    if tech.color:
+        body["color"] = tech.color
+    body["carrier_in"] = carrier
+    body["carrier_out"] = carrier
+    body["flow_in_eff"] = tech.carriers_in[carrier]
+    body["flow_out_eff"] = tech.carriers_out[carrier]
+    return body
+
+
+def _supply_body(tech: TechnologySpec) -> dict[str, Any]:
+    """A ``supply`` tech (generation): no input carrier, one output
+    carrier, ``source_unit`` from the spec. Its available output per
+    timestep (``source_use_max``) is scenario data -- for PV the per-kWp
+    profile from ``generation_technologies.pv.profiles``. Without that data
+    Calliope treats the source as unlimited, so the scenario must always
+    supply it wherever the technology is placed."""
+    carrier = next(iter(tech.carriers_out))
+    body: dict[str, Any] = {"base_tech": "supply", "name": tech.name}
+    if tech.color:
+        body["color"] = tech.color
+    body["carrier_out"] = carrier
+    body["flow_out_eff"] = tech.carriers_out[carrier]
+    body["source_unit"] = tech.source_unit
+    return body
+
+
+# Shape of the base body per Calliope base technology; everything after it
+# (capacity, lifetime, costs, passthrough params) is shared.
+_BODY_BUILDERS = {
+    "conversion": _conversion_body,
+    "storage": _storage_body,
+    "supply": _supply_body,
+}
+
+
+def export(tech: TechnologySpec) -> dict[str, Any]:
+    """Return the Calliope tech body for ``tech`` (``conversion``,
+    ``storage`` or ``supply``, per ``tech.base_tech``)."""
+    body = _BODY_BUILDERS[tech.base_tech](tech)
 
     out = _primary_out(tech)
     body["flow_cap_max"] = _capacity_field(tech.flow_cap_max, out)
     body["lifetime"] = tech.lifetime
-    body["cost_flow_cap"] = _capacity_cost_field(tech.cost_flow_cap, out)
+    if tech.cost_flow_cap is not None:
+        body["cost_flow_cap"] = _capacity_cost_field(tech.cost_flow_cap, out)
 
     for key, value in tech.params.items():
         if key in _PER_CAPACITY_PARAMS:

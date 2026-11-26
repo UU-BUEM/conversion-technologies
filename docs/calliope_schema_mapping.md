@@ -59,6 +59,7 @@ guessed): every `cost_*` name below is a real, current Calliope parameter.
 | `cost_om_annual` | Fixed O&M cost | currency/kW/year | annual fixed O&M per unit installed capacity -- **note**: an earlier version of this column was misnamed `cost_flow_om_annual` (not a real Calliope key); renamed once the real name was confirmed |
 | `cost_flow_in` | Variable cost per unit *consumed* (e.g. fuel price) | currency/kWh in | "operating cost per unit of inflow" |
 | `cost_flow_out` | Variable cost per unit *produced* (e.g. output-linked maintenance) | currency/kWh out | "operating cost per unit of outflow" |
+| `cost_storage_cap` | Investment cost of storage energy capacity (stationary batteries) | currency/kWh of storage | "cost per unit `storage_cap`" (Calliope 0.7.0 `math/base.yaml` parameter schema) |
 | `cost_interest_rate` | Discount/interest rate for cost annualisation -- not a currency cost | fraction, e.g. `0.0225` | "interest rate for annuity calculation" |
 
 **Fuel is priced once, on the supply side.** The bundled `costs.csv` leaves
@@ -281,8 +282,8 @@ catalog stays design-point-only by design (`.claude/heat_pump/resolved.md`
 "weather-integration-scope").
 
 The temperature series comes from the sibling
-[`weather`](https://github.com/UU-BUEM/weather) package's own
-`get_point_weather(latitude, longitude, year, provider="era5-land",
+[`weather`](https://github.com/enerplanet/weather) package's own
+`get_point_weather(latitude, longitude, year, provider="era5-land", variables=["T"],
 data_dir=None)` — a real per-location fetch of an already-processed archive
 (it does not download/process data itself; raises `FileNotFoundError` if
 nothing's been processed yet for that `(provider, year)`). `weather` is a
@@ -433,6 +434,158 @@ individual-vs-community competition between cooling (or heating) sources are
 running-Calliope-solve caveat as everywhere else in this doc applies to the
 `cooling` carrier wiring too.
 
+## Electric vehicles (`new/ev/`)
+
+How the EV is split over occupancy, buem, this repo and a scenario, and
+where each constraint (SOC, capacity, efficiency, availability) is set:
+[`ev_architecture.md`](ev_architecture.md).
+
+### Is an EV a conversion, demand or flexibility technology?
+
+All three, which is why it is not one Calliope technology. From the grid's
+point of view an EV is a **flexible demand**: the energy needed for
+driving is fixed, but when it is drawn is free within the hours the car is
+plugged in. With vehicle-to-grid it becomes **storage** seen from the
+grid. Physically it is three parts, each with a Calliope base technology,
+linked by their own carrier `ev_electricity` (energy on the car's side of
+the charger):
+
+| Part | Catalogue technology | `base_tech` | Carriers |
+| --- | --- | --- | --- |
+| Charger | `ev_charger_ac_household`, `ev_charger_ac_building`, `ev_charger_dc_community` | `conversion` | electricity → ev_electricity, efficiency 0.92-0.93 |
+| Bidirectional charger, discharge side | `ev_v2g_household` | `conversion` | ev_electricity → electricity |
+| Traction battery | `ev_battery_household` | `storage` | ev_electricity, 60 kWh fixed, 10% reserve |
+| Driving | none (scenario data) | `demand` | ev_electricity, `sink_use_equals` = occupancy `ev_drive_kwh` |
+| Charging away from home | none (scenario data) | `supply` | ev_electricity, `source_use_equals` = occupancy `ev_away_charging_kwh` x away efficiency |
+
+The flexibility is not a parameter: it emerges from the battery storing
+energy between when it is charged and when it is driven. Because the
+driving demand is drawn from the battery, the state of charge needed before
+each trip is enforced without any explicit "SOC at departure" constraint.
+
+### Availability: charging only while plugged in
+
+Calliope 0.7.0's base math has a lower bound `flow_out_min_relative` but no
+time-varying upper bound on output relative to capacity. Every technology
+with `TechnologySpec.time_varying_availability` (the chargers and the V2G
+discharger) therefore gets a custom-math constraint, written to the same
+`additional_math.yaml` as the carrier-ratio math
+(`calliope_export/availability_math.py`):
+
+```yaml
+flow_out <= flow_cap * timestep_resolution * flow_out_max_relative
+```
+
+`flow_out_max_relative` is a per-node, per-timestep fraction the scenario
+supplies as a data table, from occupancy's `ev_plugged_in` column. **Supply
+it for every availability-bound technology at a node.** Its declared default
+is 1 (always available), so a V2G discharger without the series will
+happily discharge a car that is not there. A real solve made exactly this
+mistake when only the charger got the series.
+
+### Scenario wiring (per building)
+
+- `ev_battery_household`: give the battery a start and an end. Preferred:
+  `cyclic_storage: false`, `storage_initial` = the simulated car's level
+  before the first timestep, and `storage_final_min` = its level in the
+  last timestep (custom math `storage_final_level_min`,
+  `calliope_export/storage_math.py`, written with every export that has a
+  storage technology). The simulated year is then a feasible solution and
+  the optimised car is the same car. Fallback: `cyclic_storage: true` with
+  a free start. Without either, the optimiser drains the "free" initial
+  charge. Do **not** combine `cyclic_storage: true` with `storage_initial`:
+  the battery must then hold that exact level in the last timestep,
+  infeasible when the car is away or nearly empty then (48 of 264 Loenen
+  EV households in a first full run).
+- An **existing** wallbox: fix its capacity with node-level
+  `flow_cap_min` = `flow_cap_max` (car side, e.g. 7.4 kW x 0.92 = 6.81 kW).
+  Left free, the optimiser buys the smallest charger that delivers the
+  week's energy (0.27 kW in the test below), which is a sizing study, not
+  smart charging.
+- The battery size (`storage_cap_max`/`storage_cap_min`, 60 kWh) and the
+  charger efficiency (0.92) are the same defaults occupancy's EV model
+  uses. If one is changed for a building, change both, so the uncontrolled
+  baseline and the optimisation describe the same car.
+- Per-building decomposition stays exact: the battery is node-local, so it
+  couples one building's timesteps, not buildings. A shared community
+  battery or a grid link between buildings would not.
+
+### Costs
+
+| Technology | Cost | Basis |
+| --- | --- | --- |
+| AC home charger | 150 EUR2025/kW (about EUR 2,000 incl. VAT installed, 11 kW) | ANWB, derived |
+| AC building charge points | 150 EUR2025/kW | proxy of the household value |
+| DC community hub | 204 EUR2025/kW, charger only | Virta, proxy; grid connection extra |
+| V2G discharge side | 350 EUR2025/kW premium over a unidirectional charger | assumption |
+| V2G battery wear | 0.046 EUR2025 per kWh discharged | BNEF 2024 pack price / 2,000 cycles |
+| Battery | none | the car is bought for mobility |
+
+Battery wear is priced on the V2G discharger, not on the battery: smart
+charging without discharging does not change the battery's total
+throughput (the same driving energy passes through it), so only discharging
+to the grid adds wear. Whether DC fast charging wears batteries
+measurably faster than AC is contested in the literature, so no extra wear
+cost is put on `ev_charger_dc_community`. Electricity and public-charging
+prices go on the scenario's supply technologies, as for every other
+category.
+
+### Verified in a real `calliope==0.7.0` solve
+
+One household (occupancy `working_couple`, seed 7), one January week, a
+time-of-use grid price (0.30 EUR/kWh from 07:00 to 23:00, 0.15 overnight),
+CBC solver:
+
+| Check | Result |
+| --- | --- |
+| Charging while unplugged (`ev_plugged_in` = 0) | 0.000 kWh |
+| Hours above capacity x availability | 0 |
+| Grid energy to the charger, smart vs. occupancy's uncontrolled profile | 59.0 vs. 59.0 kWh |
+| Charging cost, smart vs. uncontrolled | EUR 8.86 vs. EUR 14.90 (all smart charging in cheap hours) |
+| Battery minimum / end | 6.0 kWh (reserve) / 54.0 kWh (= start) |
+| With V2G: energy back to the home, discharge while unplugged | 23.3 kWh, 0.000 kWh |
+
+## Stationary batteries (`new/battery/`)
+
+`battery_lithium_ion_household` and `battery_lithium_ion_community`:
+Calliope `storage` on `electricity`, sized freely in energy (`storage_cap`,
+kWh, priced by `cost_storage_cap`) and power (`flow_cap`, kW). Unlike the EV
+traction battery they are investments, so a missing `cost_storage_cap` is
+rejected.
+
+| Column | Meaning |
+| --- | --- |
+| `efficiency` | one-way efficiency, exported as both `flow_in_eff` and `flow_out_eff` (round trip = efficiency squared) |
+| `storage_cap_max` | per-node ceiling on usable energy (kWh) |
+| `flow_cap_per_storage_cap_max` | C-rate limit (kW per kWh); required, otherwise a battery whose power is free (household) could charge fully in one hour |
+| `storage_loss` | self-discharge per hour (Calliope's unit), from DEA's %/day |
+| `cost_storage_cap` | investment per kWh (`costs.csv`) |
+| `cost_flow_cap` | investment per kW, only where the source splits it (community; DEA power conversion system). A home battery is sold per usable kWh with inverter and installation, so it has none. |
+
+Sources: Danish Energy Agency storage datasheet, sheet 180 (utility scale,
+May 2025) for the community battery; energievergelijk.nl installed prices
+(fixed 10 kWh system) for the home battery. At DEA's costs a 1 MW / 2 MWh
+battery is about EUR 581k against the Thomassen (Loenen) battery's reported
+EUR 375k -- see `parameter_sources.csv`.
+
+**Grid export is not a package technology.** Like grid import
+(`supply_grid_electricity`), selling electricity is a market
+transaction priced in the scenario (convention #8: electricity is priced
+once, on the market techs), so the export sink lives in the scenario's
+`demand_techs.yaml`.
+
+## Generation technologies (`generation_technologies/`)
+
+A generation technology is a Calliope `supply` tech
+(`TechnologySpec.base_tech == "supply"`): no `carrier_in`, one
+`carrier_out`, and `source_unit` from the spec. Rooftop PV uses
+`source_unit: per_cap` with `flow_out_eff: 1.0`; its `source_use_max`
+(AC output per kWp per hour, losses included) is scenario data written by
+`generation_technologies.pv.profiles`. Capacity, cost and lifetime fields
+map exactly as for conversion techs (indexed on `electricity`). Method,
+consistency with EnerPlanET's pysam-pv, and the roof layout:
+[`generation_technologies.md`](generation_technologies.md).
+
 ## occupancy is out of scope
 
 `occupancy`'s `total_power_kwh` (hourly household/building electricity
@@ -450,3 +603,8 @@ neither `weather` nor `occupancy` produce a **heat demand** profile at all
 (`occupancy`'s `CHANGELOG.md` explicitly excludes thermal loads) — an actual
 Calliope model still needs one from elsewhere to have anything for the heat
 pump/boiler/CHP technologies here to usefully dispatch against.
+
+The same holds for the EV technologies above: this package defines the
+charger, discharger and battery, while occupancy's EV time series
+(`ev_plugged_in`, `ev_drive_kwh`, `ev_away_charging_kwh`) reach a model
+only as scenario data tables. Neither package imports the other.

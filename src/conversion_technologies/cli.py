@@ -6,12 +6,20 @@ import argparse
 import sys
 from pathlib import Path
 
-from conversion_technologies import (  # noqa: F401  (new registers technologies)
+from conversion_technologies import (  # noqa: F401  (both register technologies)
     __version__,
+    generation_technologies,
     new,
 )
 from conversion_technologies.calliope_export import EXPORTERS, SCHEMA_CHOICES
+from conversion_technologies.calliope_export.availability_math import (
+    build_availability_math,
+    merge_math,
+)
 from conversion_technologies.calliope_export.ratio_math import build_ratio_math
+from conversion_technologies.calliope_export.storage_math import (
+    build_storage_final_math,
+)
 from conversion_technologies.calliope_export.writer import (
     write_technology_yaml,
     write_techs_yaml,
@@ -36,6 +44,9 @@ _CATEGORY_ALIASES = {
     "combined_heat_and_power": "combined_heat_and_power",
     "ac": "chiller",
     "chiller": "chiller",
+    "ev": "ev",
+    "battery": "battery",
+    "pv": "pv",
 }
 
 # TechnologySpec.scale is always one of these three, for every category.
@@ -120,13 +131,20 @@ def _math_output_path(output_path: Path, *, is_directory: bool) -> Path:
 def _maybe_write_ratio_math(
     techs: list[TechnologySpec], math_path: Path, *, no_custom_math: bool
 ) -> None:
-    """Write the multi-carrier-ratio fix (see ``ratio_math.build_ratio_math``)
-    alongside a techs export, unless ``--no-custom-math`` was passed.
-    Prints a message either way, so its absence is visible, not silent.
+    """Write the accompanying custom math alongside a techs export, unless
+    ``--no-custom-math`` was passed: the multi-carrier-ratio fix
+    (``ratio_math.build_ratio_math``) and the time-varying availability
+    bound (``availability_math.build_availability_math``) and the storage
+    final-level bound (``storage_math.build_storage_final_math``). Prints a message
+    either way, so its absence is visible, not silent.
     """
     if no_custom_math:
         return
-    math = build_ratio_math(techs)
+    math = merge_math(
+        build_ratio_math(techs),
+        build_availability_math(techs),
+        build_storage_final_math(techs),
+    )
     if math is None:
         print("No custom math needed for this export.")
         return
@@ -224,13 +242,60 @@ def _cmd_weather_cop(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_pv_profile(args: argparse.Namespace) -> int:
+    # Imported here: needs pandas, PySAM and weather, which no other
+    # command imports.
+    import json
+
+    import pandas as pd
+
+    from conversion_technologies.generation_technologies.pv.profiles import (
+        write_pv_profiles,
+    )
+    from conversion_technologies.generation_technologies.pv.pvwatts import (
+        fetch_weather,
+    )
+    from conversion_technologies.generation_technologies.pv.roof import (
+        building_capacity_factor,
+        roof_pv,
+    )
+
+    faces_by_node = json.loads(Path(args.roof_faces).read_text(encoding="utf-8"))
+    weather = fetch_weather(
+        args.latitude,
+        args.longitude,
+        args.year,
+        provider=args.provider,
+        data_dir=args.data_dir,
+    )
+    factors: dict[str, pd.Series] = {}
+    potential: dict[str, float] = {}
+    for node, faces in faces_by_node.items():
+        roof = roof_pv(faces or [], args.technology_id)
+        potential[node] = roof.max_capacity_kwp
+        if roof.arrays:
+            factors[node] = building_capacity_factor(
+                weather, args.latitude, args.longitude, roof
+            )
+    paths = write_pv_profiles(
+        args.technology_id,
+        pd.DataFrame(factors, index=weather.index),
+        potential,
+        args.output or SETTINGS.output_dir,
+    )
+    print(f"{len(factors)} of {len(faces_by_node)} node(s) can carry PV")
+    for path in paths.values():
+        print(f"Wrote {path}")
+    return 0
+
+
 def _add_filter_arguments(subparser: argparse.ArgumentParser) -> None:
     """Shared --category/--variant/--scale filters for ``list`` and ``export-all``."""
     subparser.add_argument(
         "--category",
         choices=sorted(_CATEGORY_ALIASES),
         default=None,
-        help="Filter by category (aliases: hp, boiler, chp, ac).",
+        help="Filter by category (aliases: hp, boiler, chp, ac, ev, pv).",
     )
     subparser.add_argument(
         "--variant",
@@ -386,6 +451,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output directory (default: <output_dir>/).",
     )
     weather_cop_parser.set_defaults(func=_cmd_weather_cop)
+
+    pv_parser = subparsers.add_parser(
+        "pv-profile",
+        help=(
+            "Rooftop PV for a set of buildings at one location: hourly AC "
+            "output per kWp (PVWatts v8, as EnerPlanET's pysam-pv) and each "
+            "roof's potential, as Calliope data (see "
+            "docs/generation_technologies.md)."
+        ),
+    )
+    pv_parser.add_argument(
+        "technology_id",
+        help="A registered PV technology id, e.g. pv_rooftop_household.",
+    )
+    pv_parser.add_argument(
+        "--roof-faces",
+        required=True,
+        help=(
+            'JSON file {node: [{"id", "tilt", "azimuth", "area_m2"}, ...]}, '
+            "e.g. from buem's roof_faces summary column."
+        ),
+    )
+    pv_parser.add_argument("--latitude", required=True, type=float)
+    pv_parser.add_argument("--longitude", required=True, type=float)
+    pv_parser.add_argument("--year", required=True, type=int)
+    pv_parser.add_argument(
+        "--provider",
+        default="era5-land",
+        help="Weather provider (era5-land/cosmo-rea6/merra-2), see weather.get_point_weather.",
+    )
+    pv_parser.add_argument("--data-dir", default=None)
+    pv_parser.add_argument("-o", "--output", default=None, help="Output directory.")
+    pv_parser.set_defaults(func=_cmd_pv_profile)
 
     return parser
 

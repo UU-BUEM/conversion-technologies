@@ -31,6 +31,11 @@ _TECH_COLUMNS = [
     "flow_ramping",
     "cop",
     "aux_electricity_ratio",
+    "storage_cap_max",
+    "storage_cap_min",
+    "storage_discharge_depth",
+    "flow_cap_per_storage_cap_max",
+    "storage_loss",
 ]
 _COST_COLUMNS = [
     "category",
@@ -43,6 +48,7 @@ _COST_COLUMNS = [
     "cost_flow_in",
     "cost_flow_out",
     "cost_interest_rate",
+    "cost_storage_cap",
 ]
 
 
@@ -65,8 +71,9 @@ def _write_split_csvs(rows: list[dict], directory: Path) -> None:
 
 def test_load_technology_rows_coerces_blanks_and_numbers() -> None:
     rows = load_technology_rows("conversion_technologies.new")
-    # 3 boiler + 2 heat pump + 2 CHP + 3 chiller variants, x3 scales
-    assert len(rows) == 30
+    # 3 boiler + 2 heat pump + 2 CHP + 3 chiller variants, x3 scales,
+    # + 5 EV rows (each EV variant exists at one scale only)
+    assert len(rows) == 37
 
     row = next(
         r
@@ -98,7 +105,14 @@ def test_load_technology_rows_joins_costs_by_category_variant_scale() -> None:
 def test_load_technology_rows_filters_by_category() -> None:
     rows = load_technology_rows("conversion_technologies.new")
     categories = {r["category"] for r in rows}
-    assert categories == {"boiler", "heat_pump", "combined_heat_and_power", "chiller"}
+    assert categories == {
+        "battery",
+        "boiler",
+        "heat_pump",
+        "combined_heat_and_power",
+        "chiller",
+        "ev",
+    }
 
 
 def test_load_technology_rows_rejects_an_orphaned_costs_row(

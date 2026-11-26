@@ -1,7 +1,8 @@
 """Every bundled parameter value must be traceable to a documented source.
 
-``docs/sources/parameter_sources.csv`` records, for each numeric cell of
-``new/technologies.csv`` and ``new/costs.csv``, where the value comes from
+``docs/sources/parameter_sources.csv`` records, for each value cell of
+``new/`` and ``generation_technologies/`` ``technologies.csv`` and
+``costs.csv``, where the value comes from
 (``source_id`` -> ``docs/sources/references.csv``), the raw source value and
 unit, and the conversion applied. These tests fail if a value is changed in
 one file but not the other, or if a new value is added without provenance.
@@ -15,7 +16,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-PARAMS_DIR = ROOT / "src" / "conversion_technologies" / "new"
+PACKAGE_DIR = ROOT / "src" / "conversion_technologies"
+PARAMS_DIRS = (PACKAGE_DIR / "new", PACKAGE_DIR / "generation_technologies")
 SOURCES_DIR = ROOT / "docs" / "sources"
 
 # Identity/structure columns: not parameters, so they need no provenance.
@@ -27,6 +29,7 @@ _STRUCTURAL = {
     "color",
     "carrier_in",
     "carrier_in_2",
+    "carrier_out",
 }
 _BASES = {"direct", "derived", "proxy", "assumption"}
 
@@ -36,15 +39,25 @@ def _read(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
-def _catalogue_cells() -> dict[tuple[str, str, str, str], float]:
+def _value(text: str) -> float | str:
+    """Numbers compare as numbers; a text setting (e.g. a PV module type)
+    as text."""
+    try:
+        return float(text)
+    except ValueError:
+        return text.strip()
+
+
+def _catalogue_cells() -> dict[tuple[str, str, str, str], float | str]:
     cells = {}
-    for name in ("technologies.csv", "costs.csv"):
-        for row in _read(PARAMS_DIR / name):
-            key = (row["category"], row["variant"], row["scale"])
-            for col, val in row.items():
-                if col in _STRUCTURAL or val.strip() == "":
-                    continue
-                cells[(*key, col)] = float(val)
+    for params_dir in PARAMS_DIRS:
+        for name in ("technologies.csv", "costs.csv"):
+            for row in _read(params_dir / name):
+                key = (row["category"], row["variant"], row["scale"])
+                for col, val in row.items():
+                    if col in _STRUCTURAL or val.strip() == "":
+                        continue
+                    cells[(*key, col)] = _value(val)
     return cells
 
 
@@ -67,7 +80,11 @@ def test_every_provenance_row_matches_the_catalogue_value() -> None:
     cells = _catalogue_cells()
     for key, row in _provenance().items():
         assert key in cells, f"parameter_sources.csv row {key} has no catalogue value"
-        assert cells[key] == pytest.approx(float(row["value"]), rel=1e-9), key
+        expected = _value(row["value"])
+        if isinstance(cells[key], str) or isinstance(expected, str):
+            assert cells[key] == expected, key
+        else:
+            assert cells[key] == pytest.approx(expected, rel=1e-9), key
 
 
 def test_every_provenance_row_names_a_known_source_and_basis() -> None:

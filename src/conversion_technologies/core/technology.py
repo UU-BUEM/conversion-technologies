@@ -15,6 +15,12 @@ from conversion_technologies.core.validation import (
     require_range,
 )
 
+#: Calliope base technologies this package exports.
+BASE_TECHS = ("conversion", "storage", "supply")
+
+#: Calliope 0.7 ``source_unit`` values (supply technologies).
+SOURCE_UNITS = ("absolute", "per_area", "per_cap")
+
 
 @dataclass(frozen=True)
 class TechnologySpec:
@@ -68,6 +74,25 @@ class TechnologySpec:
         Every other Calliope-modern-schema-named numeric parameter this
         technology has a value for (only non-blank CSV columns end up
         here) -- e.g. ``{"cost_flow_in": 0.04, "cost_interest_rate": 0.10}``.
+    base_tech : str
+        Calliope base technology: ``"conversion"`` (default),
+        ``"storage"`` or ``"supply"``. A storage technology has the same
+        single carrier in and out, and its capacity parameters
+        (``storage_cap_max``, ...) live in ``params``. A supply technology
+        (generation, e.g. rooftop PV) has no input carrier and one output
+        carrier; its available output per timestep comes from scenario data
+        (``source_use_max``), in the unit ``source_unit`` names.
+    source_unit : str or None
+        Supply technologies only: Calliope's ``source_unit`` --
+        ``"per_cap"`` when ``source_use_max`` is per unit of capacity (a PV
+        capacity factor), ``"absolute"`` or ``"per_area"`` otherwise.
+    time_varying_availability : bool
+        True for a technology that can only operate while something
+        external allows it -- an EV charger can only charge a car that is
+        plugged in. The exporter's accompanying custom math then bounds its
+        output by a per-timestep ``flow_out_max_relative`` (0-1) that the
+        scenario supplies as data; without data it defaults to 1 (always
+        available). See ``docs/calliope_schema_mapping.md``.
     """
 
     id: str
@@ -79,21 +104,46 @@ class TechnologySpec:
     carriers_out: dict[str, float]
     flow_cap_max: float
     lifetime: int
-    cost_flow_cap: float
+    cost_flow_cap: float | None
     primary_carrier_in: str | None = None
     primary_carrier_out: str | None = None
     color: str | None = None
     notes: str | None = None
     params: dict[str, float] = field(default_factory=dict)
+    base_tech: str = "conversion"
+    time_varying_availability: bool = False
+    source_unit: str | None = None
 
     def __post_init__(self) -> None:
-        if not self.carriers_in:
+        if self.base_tech not in BASE_TECHS:
+            raise ValueError(
+                f"Technology '{self.id}': base_tech={self.base_tech!r} is not "
+                f"one of {BASE_TECHS}."
+            )
+        if self.base_tech == "supply":
+            self._check_supply()
+        elif not self.carriers_in:
             raise ValueError(
                 f"Technology '{self.id}' must define at least one input carrier."
             )
         if not self.carriers_out:
             raise ValueError(
                 f"Technology '{self.id}' must define at least one output carrier."
+            )
+        if self.base_tech == "storage":
+            if len(self.carriers_in) != 1 or set(self.carriers_in) != set(
+                self.carriers_out
+            ):
+                raise ValueError(
+                    f"Technology '{self.id}': a storage technology stores one "
+                    "carrier, so carriers_in and carriers_out must be the same "
+                    "single carrier."
+                )
+        elif self.cost_flow_cap is None:
+            raise ValueError(
+                f"Technology '{self.id}': a {self.base_tech} technology needs "
+                "cost_flow_cap; only a storage technology whose investment is "
+                "not an energy-system decision may omit it."
             )
         require_range(
             self.flow_cap_max,
@@ -104,15 +154,16 @@ class TechnologySpec:
             inclusive_lo=False,
             inclusive_hi=False,
         )
-        require_range(
-            self.cost_flow_cap,
-            0,
-            float("inf"),
-            name="cost_flow_cap",
-            tech_id=self.id,
-            inclusive_lo=False,
-            inclusive_hi=False,
-        )
+        if self.cost_flow_cap is not None:
+            require_range(
+                self.cost_flow_cap,
+                0,
+                float("inf"),
+                name="cost_flow_cap",
+                tech_id=self.id,
+                inclusive_lo=False,
+                inclusive_hi=False,
+            )
         require_range(
             self.lifetime,
             0,
@@ -133,3 +184,20 @@ class TechnologySpec:
                 inclusive_hi=False,
             )
         require_positive_costs(self.params, tech_id=self.id)
+
+    def _check_supply(self) -> None:
+        if self.carriers_in:
+            raise ValueError(
+                f"Technology '{self.id}': a supply technology has no input "
+                f"carrier, got {sorted(self.carriers_in)}."
+            )
+        if len(self.carriers_out) != 1:
+            raise ValueError(
+                f"Technology '{self.id}': a supply technology has exactly one "
+                "output carrier."
+            )
+        if self.source_unit not in SOURCE_UNITS:
+            raise ValueError(
+                f"Technology '{self.id}': source_unit={self.source_unit!r} is "
+                f"not one of {SOURCE_UNITS}."
+            )

@@ -53,6 +53,17 @@ Changing a value in one place but not the other fails the test suite.
 | building | DEA Individual Heating, *apartment block, existing building* (2025) | HRE D3.2 *air-cooled chiller <400 kW*; HRE *VRF* (reversible) | DEA micro gas turbine; DEA pellet CHP (proxy) |
 | community | DEA Electricity and District Heating (1 MW heat pump, 5 MW electric boiler, gas and pellet heat-only boilers) | HRE D3.2 *air-cooled chiller >400 kW*; *500 kW LiBr absorption chiller* | DEA gas engine; DEA 3 MW_e pellet CHP |
 
+Electric-vehicle rows (`category = ev`) have no Danish Energy Agency
+source: the AC home charger cost is derived from ANWB's installed-cost
+figure (EUR 2,000 incl. VAT for 11 kW), the building AC charge points
+borrow it (proxy), the DC hub uses Virta's charger-only figure of about
+200 EUR/kW (proxy; grid connection excluded), the charging efficiency is
+Brady & O'Mahony (2016), and the V2G battery-wear cost is BloombergNEF's
+2024 battery-electric-vehicle pack price (USD 97/kWh) divided by an
+assumed 2,000 equivalent full cycles. The V2G hardware premium, every
+lifetime and the battery size and reserve are assumptions; each row's
+`note` in `parameter_sources.csv` says so.
+
 The Danish Energy Agency's *Technology Catalogues* (costs and performance)
 and *Socio-economic calculation assumptions* (fuel prices) are the
 parameter sources. *Denmark's Climate Status and Outlook* is a projection

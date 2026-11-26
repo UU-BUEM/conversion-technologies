@@ -1,0 +1,3 @@
+category,variant,scale,name,color,carrier_out,flow_cap_max,lifetime,losses,dc_ac_ratio,inverter_efficiency,module_type,mounting,min_face_area_m2,flat_roof_max_tilt,flat_roof_tilt,flat_roof_azimuth,max_azimuth_from_south_deg,kwp_per_m2,roof_usable_fraction
+pv,rooftop,household,Rooftop photovoltaics,#F9C80E,electricity,20,25,0.14,1.1,0.96,standard,roof,10,10,15,180,90,0.2,0.6
+pv,rooftop,building,Rooftop photovoltaics,#F9C80E,electricity,500,25,0.14,1.1,0.96,standard,roof,10,10,15,180,90,0.2,0.6

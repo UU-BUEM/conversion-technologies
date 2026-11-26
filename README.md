@@ -2,12 +2,14 @@
 
 [![CI](https://github.com/UU-BUEM/conversion-technologies/actions/workflows/ci.yml/badge.svg)](https://github.com/UU-BUEM/conversion-technologies/actions/workflows/ci.yml)
 
-Calliope-compatible technology YAML configs for heat-producing energy
-conversion technologies — heat pumps, boilers, and combined heat and power
-(CHP) — from a single household up to a community scale.
+Calliope-compatible technology YAML configs for energy conversion
+technologies — heat pumps, boilers, combined heat and power (CHP),
+chillers, and electric-vehicle charging (chargers, vehicle-to-grid and the
+vehicle battery as storage) — from a single household up to a community
+scale.
 
 Part of the `UU-BUEM` sibling package family, alongside
-[`weather`](https://github.com/UU-BUEM/weather) and
+[`weather`](https://github.com/enerplanet/weather) and
 [`occupancy`](https://github.com/UU-BUEM/occupancy).
 
 ## What this does
@@ -30,7 +32,8 @@ the full attribute mapping and known limitations.
 .\setup.ps1                      # creates the conversion_env conda environment
 conversion-technologies info
 conversion-technologies list                                       # every registered technology
-conversion-technologies list --category hp                         # aliases: hp, boiler, chp
+conversion-technologies list --category hp                         # aliases: hp, boiler, chp, ac, ev
+conversion-technologies list --category ev                         # EV chargers, vehicle-to-grid, battery
 conversion-technologies list --category hp --variant electric      # electric only, all scales
 conversion-technologies list --scale household                     # any category, household scale only
 
@@ -198,7 +201,10 @@ src/conversion_technologies/
 │   ├── costs.csv           # every cost_* column, joined to technologies.csv by key
 │   ├── boiler/{generic,specific}
 │   ├── heat_pump/{generic,specific}
-│   └── combined_heat_and_power/{generic,specific}
+│   ├── combined_heat_and_power/{generic,specific}
+│   ├── chiller/specific
+│   ├── battery/specific   # stationary home and community batteries (storage)
+│   └── ev/specific        # chargers, vehicle-to-grid, battery (storage)
 └── existing/              # out of scope: bottom-up simulation of incumbent stock (e.g. fireplace.py)
 ```
 
