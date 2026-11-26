@@ -89,3 +89,6 @@ scenarios/*/*/nodes/*.csv
 
 # Per-node demand tables of other node sets (e.g. nodes_day_ahead/), same reason
 scenarios/*/*/nodes_*/*.csv
+
+# Unpublished results kept local until published (scenario docs/private/)
+scenarios/*/*/docs/private/

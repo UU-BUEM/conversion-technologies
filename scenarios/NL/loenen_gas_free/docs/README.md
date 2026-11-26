@@ -18,7 +18,7 @@ package alone doesn't own.
 - `phase7_grid.md` — workflow step 1: grid from a provided network, DSO open data (Liander) or pylovo; Loenen built from Liander (local only: licence).
 - `phase8_demand_supply.md` — workflow step 2: demand and PV supply per building and Liander station for four scenarios (baseline, standard/advanced retrofit, EV 50%); cooling fixed in buem (window sizing, shading, ventilation).
 - `phase9_community_pilot.md` — workflow steps 5-6 pilot: 20 members on one station, independent vs community vs community with the station limit; mapping to the EnerPlanET S1-S4 experiments and the Dutch legal routes.
-- `phase10_heat_pump_cop.md` — fixed vs hourly heat pump COP (and hourly matched to the same seasonal COP), region (1,260 dwellings) and pilot; method, Calliope wiring, results.
+- `phase10_heat_pump_cop.md` — fixed vs hourly heat pump COP (and hourly matched to the same seasonal COP): method, calibration, Calliope wiring, reproduction. Results local only (`private/`, git-ignored) until published.
 - `../measures/` — sourced catalogue of Loenen's own measures, subsidies and shared assets (loenenenergie.nl); see its `README.md`.
 
 Each phase file states, up front: what was checked, what passed, what

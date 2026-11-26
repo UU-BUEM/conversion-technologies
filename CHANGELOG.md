@@ -15,16 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scales the hourly COP so its heat-weighted seasonal COP equals the
   design-point COP (one factor = a recalibrated Carnot quality factor), and
   writes `<id>_cop_calibration.json`. Without it the design-point quality
-  factor lifts the seasonal COP above the fixed-COP value (Loenen 2018:
-  3.51 vs 3.30).
+  factor shifts the seasonal COP away from the fixed-COP value.
 - **Loenen: fixed vs hourly heat pump COP**, region and pilot (scenario):
   `build_nodes.py --cop hourly_matched` (new default) | `hourly` | `design`;
   `build_hp_cop.py --match-seasonal`; `compare_cop_variants.py`;
   `solve_all_buildings.py --solver` (Gurobi/HiGHS native backends; solver
   settings shared in `build_nodes.py`); per-building re-solve with the new
-  demand (`outputs/v5`). At an unchanged seasonal COP, an hourly COP raises
-  the air-source heat pump share of heat from 1.6 % to 8.3 % (98 -> 490
-  dwellings); without the recalibration to 16.6 %. See
+  demand (`outputs/v5`), three COP variants. Method:
   `scenarios/NL/loenen_gas_free/docs/phase10_heat_pump_cop.md`.
 
 - **Loenen: hourly air-source heat pump COP** (scenario):
@@ -32,9 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and PV weather point) -> `heat_pump_cop_2018/`; `build_nodes.py --cop
   hourly` (default; `design` reproduces v3/v4) wires `flow_out_eff[heat]`
   and `carrier_flow_ratio_in` per hour through the `hourly_cop` override
-  (Calliope 0.7.0 lets YAML values beat data tables). Pilot, full year:
-  air-source heat pumps now built; community EUR 59,834 vs independent
-  64,144 (sharing -6.7%). See `scenarios/NL/loenen_gas_free/docs/phase9_community_pilot.md`.
+  (Calliope 0.7.0 lets YAML values beat data tables). See `scenarios/NL/loenen_gas_free/docs/phase9_community_pilot.md`.
 
 ### Changed
 
