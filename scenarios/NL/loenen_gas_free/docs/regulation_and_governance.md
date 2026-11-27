@@ -197,7 +197,7 @@ member view (§5).
 
 - Issue #5 is closed: SCE facts, Energiewet article numbers and the EMD
   bill status are verified above (2026-11-27). Re-check the EMD bill
-  (Kamerstuk 36990) before a paper is submitted.
+  (Kamerstuk 36990) before citing its status.
 - Member cost view: energy tax on shared kWh, 2027 tariffs, subsidies
   (issue #3).
 - Repeat if the EMD implementation allows sharing with free choice of
