@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-building models. 60 dwellings: all optimal, objectives within 8e-9;
   median solve 27.4 / 14.4 / 10.7 / 3.7 s. See
   `scenarios/NL/loenen_gas_free/docs/solver_comparison.md`.
+- **Loenen: regulation and governance** (scenario docs):
+  `scenarios/NL/loenen_gas_free/docs/regulation_and_governance.md` lists
+  every Dutch rule the scenario touches (Energiewet energy sharing and
+  energy communities, SCE, end of net metering, taxes and VAT, station
+  capacity, gas-free, subsidies), whether the model implements it, where,
+  and how the facts were verified. Energiewet facts checked against
+  primary sources.
 
 ## [0.7.0] - 2026-11-26
 

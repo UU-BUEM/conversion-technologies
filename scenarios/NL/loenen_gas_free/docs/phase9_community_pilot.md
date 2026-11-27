@@ -128,6 +128,9 @@ through Calliope's native backends (see Solver above).
 
 ## Dutch legal routes (context, to be verified)
 
+All rules and how the model treats them: `docs/regulation_and_governance.md`
+(Energiewet facts checked against primary sources 2026-11-27).
+
 From a non-primary summary (2026-11-26 notes), to check against
 RVO/wetten.overheid.nl before citing:
 

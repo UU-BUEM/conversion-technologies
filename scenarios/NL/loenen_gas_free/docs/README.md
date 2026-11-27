@@ -14,6 +14,7 @@ package alone doesn't own.
 - `phase4_solve.md` — MEME/Calliope submission (not started).
 - `phase4b_solve_0610_sizing.md`, `phase5_per_building_decomposition.md`, `phase6_ev.md` — combined-model memory wall, exact per-building split, EV variants.
 - `tariffs_nl_2027.md` — 2027 consumer tariffs after net metering ends.
+- `regulation_and_governance.md` — every Dutch rule and policy the scenario touches (Energiewet energy sharing, SCE, end of net metering, taxes, grid capacity, gas-free, subsidies): implemented, documented or not modelled, where, and how verified.
 - `energy_community_workflow.md` — **design** for the region + ~200-member energy community: grid (provided network or pylovo), simulation, flexibility, community filter, per-feeder Calliope model, power-flow re-check.
 - `phase7_grid.md` — workflow step 1: grid from a provided network, DSO open data (Liander) or pylovo; Loenen built from Liander (local only: licence).
 - `phase8_demand_supply.md` — workflow step 2: demand and PV supply per building and Liander station for four scenarios (baseline, standard/advanced retrofit, EV 50%); cooling fixed in buem (window sizing, shading, ventilation).
