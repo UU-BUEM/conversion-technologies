@@ -171,8 +171,9 @@ Six test homes, cooling kWh/yr (sum):
 Region result: cooling 23.2 -> 5.5 GWh, median per dwelling 10.3 -> 1.8
 MWh; retrofit now changes cooling by +3 to +5% instead of +37 to +49%.
 Heating fell 2.6% in the region (6% in the test homes: less glass, less
-loss). buem's CBS validation pages were run with the old windows and
-should be rerun.
+loss). buem's CBS validation was rerun on 2026-11-27 with the new windows
+(buem `envelope_and_refurbishment.rst`, "Rerun 2026-11-27"): heating ratio
+against CBS 85140NED 2.58 -> 2.43; the gap is still the as-built stock.
 
 ## Commands
 
