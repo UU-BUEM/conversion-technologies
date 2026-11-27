@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and how the facts were verified. Energiewet facts checked against
   primary sources.
 
+### Changed
+
+- **Loenen: Dutch legal routes verified** (scenario docs, closes #5):
+  `regulation_and_governance.md` now cites the Energiewet articles (1.1,
+  2.3, 2.4, 2.30, 2.31; Stb. 2025, 12), gives the status of the EMD
+  implementation bill (Kamerstuk 36990: submitted 7 July 2026, no plenary
+  vote yet), and lists the SCE subsidy rules as checked against RVO
+  (postcoderoos, 3x80 A, one member per 5 kWp, 15 years, 2026 rates).
+
 ## [0.7.0] - 2026-11-26
 
 ### Added
